@@ -1,8 +1,8 @@
 //(c) M-II-R 2025 - MIT license.
 //In this project I used some code from OxeyMultiplayer of Oxey405 (https://github.com/oxey405/OxeyMultiplayer).
-console.log();
+//console.log();
 console.log("HeatherMultiplayer (c) M-II-R 2025 - Under MIT license.");
-console.log("You can find source code at ");
+console.log("You can find source code at https://github.com/M-II-R/HeatherMultiplayer");
 
 //Importing all modules
 const WebSocket = require("ws");
