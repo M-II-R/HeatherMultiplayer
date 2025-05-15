@@ -1,3 +1,5 @@
+# Attention! This project may work unstably! 
+
 # HeatherMultiplayer
 A WebSocket multiplayer server on JavaScript. I used the code of OxeyMultiplayer (made by [Oxey405](https://github.com/Oxey405)) as a base for this project, but I made significant changes.
 ## How to use?
