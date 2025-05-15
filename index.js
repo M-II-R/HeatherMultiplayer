@@ -9,6 +9,7 @@ const crypto = require("crypto");
 const express = require("express");
 const INDEX = '/index.html';
 const names = process.env.NAMES != undefined ? JSON.parse(process.env.NAMES) : ["Dark Knight", "Dancing Devil", "Crasy Scientist", "Carefree Angel", "Rose With Gun", "Annihilator", "Sly"]; // Auto-names for players.
+const passw = process.env.PASSWORD || "MyPassword836";
 
 let language = Intl.DateTimeFormat().resolvedOptions().locale.substring(0, 2);
 const i18n = require('./i18n');
@@ -88,6 +89,9 @@ class Message {
         if (type == "NewPlayer") { // For player.
             mess.name = data.name; // Automatically created name.
         }
+        else if (type == "Password") { // For server.
+            mess.passw = data.passw;
+        }
         else if (type == "Action") { // For server and players. Client's action (for example, walking). Only if player is in the game.
             mess.name = data.name;
             mess.data = data.data;
@@ -139,7 +143,7 @@ class Message {
             mess.what = data.what;
             //mess.ingame = data.ingame; // ingame: is player in game? In what game? 
         }*/
-       
+
         else if (type == "AnswGet") { // Data for client.
             mess.what = data.what;
             mess.data = data.data;
@@ -227,10 +231,7 @@ function LeaveTeam(pla, cmess) {
     });
     pla.data.team = [];
 }
-
-const wss = new WebSocket.Server({ server });
-
-wss.on("connection", (client) => {
+function OnConnection(client) {
     let ID = 0;
     let arrhelp = [];
 
@@ -279,6 +280,12 @@ wss.on("connection", (client) => {
     console.log(localisation["player-connected"] + ID + ")");
     let stms = Message.Create({ 'id': ID, 'name': name }, "NewPlayer");
     client.send(JSON.stringify(stms));
+}
+
+const wss = new WebSocket.Server({ server });
+
+wss.on("connection", (client) => {
+    // Create client only if password is correct.
 
     client.on("message", (message) => {
         /**
@@ -308,155 +315,76 @@ wss.on("connection", (client) => {
             return;
         }
         let cmess = Message.Create(mess, mess.type);
-        switch (cmess.type) {
-            case "Invalid":
-                client.send(`{"error":003,"type":"error"}`);
-                console.log(localisation["invalid-msg"]);
-                break;
-            case "SetName": // Name changing.
-                wcl.forEach(cl => {
-                    if (cl.socket == client) { // Find sender.
-                        if (cl.id != cmess.id) {
-                            client.send(`{"error":004,"type":"error"}`);
-                            console.log(localisation["invalid-id"]);
-                            return;
-                        }
-                        else {
-                            let newname = CreateName(cmess.name);
-                            let namemess = Message.Create({ id: cmess.id, name: newname }, "Name");
-                            client.send(JSON.stringify(namemess));
-                        }
-                    }
-                });
-                break;
-            case "Invite":
-                var ready = false;
-                wcl.forEach(cl => { // Find sender.
-                    if (cl.socket == client) {
-                        if (cl.id != cmess.id) {
-                            client.send(`{"error":004,"type":"error"}`);
-                            console.log(localisation["invalid-id"]);
-                            return;
-                        }
-                    }
-                });
-                for (let i = 0; i < wcl.length && !ready; i++) {
-                    if (wcl[i].name == cmess.name) {
-                        wcl[i].socket.send(JSON.stringify(cmess));
-                        ready = true;
-                    }
-                }
-                /*for (let key in rcl) { // Player don't must be ready.
-                    if (rcl[key]) {
-                        for (let i = 0; i < rcl[key].players.length && !ready; i++){
-                            if (rcl[key].players[i].name == cmess.name){
-                                rcl[key].players[i].socket.send(JSON.stringify(cmess));
-                                ready = true;
+        if (cmess.type == "Password") {
+            if (cmess.passw == passw) {
+                OnConnection(client);
+                client.passwiscorrect = true;
+            }
+            else {
+                client.close();
+            }
+        }
+        else if (client.passwiscorrect) {
+            switch (cmess.type) {
+                case "Invalid":
+                    client.send(`{"error":003,"type":"error"}`);
+                    console.log(localisation["invalid-msg"]);
+                    break;
+                case "SetName": // Name changing.
+                    wcl.forEach(cl => {
+                        if (cl.socket == client) { // Find sender.
+                            if (cl.id != cmess.id) {
+                                client.send(`{"error":004,"type":"error"}`);
+                                console.log(localisation["invalid-id"]);
+                                return;
+                            }
+                            else {
+                                let newname = CreateName(cmess.name);
+                                let namemess = Message.Create({ id: cmess.id, name: newname }, "Name");
+                                client.send(JSON.stringify(namemess));
                             }
                         }
-                    }
-                }*/
-                if (ready == false) {
-                    let errmess = Message.Create({ id: cmess.id, name: cmess.invname, err: "Cannot find player: " + cmess.name }, "ErrInv");
-                    client.send(JSON.stringify(errmess));
-                }
-                break;
-            case "AcceptInv": // Player don't must be ready.
-                var ready = false;
-                let pl;
-                for (let i = 0; i < wcl.length && !ready; i++) {
-                    if (wcl[i].socket == client) { // Find sender.
-                        if (wcl[i].id == cmess.id) {
-                            pl = wcl[i];
-                        }
-                        else {
-                            client.send(`{"error":004,"type":"error"}`);
-                            console.log(localisation["invalid-id"]);
-                            return;
-                        }
-                    }
-                }
-                for (let i = 0; i < wcl.length && !ready; i++) {
-                    if (wcl[i].name == cmess.invname) {
-                        wcl[i].socket.send(JSON.stringify(cmess));
-                        if (pl) {
-                            //setTimeout(() => {
-                                for (let a = 0; a < wcl[i].data.team.length; a++) { // Add player to team.
-                                    wcl[i].data.team[a].team.push(pl);
-                                    let jm = Message.Create({ id: cmess.id, jname: pl.name, name: wcl[i].data.team[a].name }, "Join");
-                                    wcl[i].data.team[a].socket.send(JSON.stringify(jm));
-                                    pl.team.push(wcl[i].data.team[a]);
-                                    pl.socket.send(JSON.stringify(Message.Create({ id: cmess.id, jname: wcl[i].data.team[a].name, name: pl.name }, "Join")));
-                                }
-                            //}, 500);
-                            wcl[i].data.team.push(pl);
-                            wcl[i].socket.send(JSON.stringify(Message.Create({ id: cmess.id, jname: pl.name, name: wcl[i].name }, "Join")));
-                            pl.data.team.push(wcl[i]);
-                            pl.socket.send(JSON.stringify(Message.Create({ id: cmess.id, jname: wcl[i].name, name: pl.name }, "Join")));
-                        }
-                        ready = true;
-                    }
-                }
-                /*for (let key in rcl) { // Player don't must be ready.
-                    if (rcl[key]) {
-                        for (let i = 0; i < rcl[key].players.length && !ready; i++) {
-                            if (rcl[key].players[i].name == cmess.invname) {
-                                rcl[key].players[i].socket.send(JSON.stringify(cmess));
-                                ready = true;
-                            }
-                        }
-                    }
-                }*/
-                if (ready == false) {
-                    let errmess = Message.Create({ id: cmess.id, name: cmess.name, err: "Cannot find player: " + cmess.invname }, "ErrInv");
-                    client.send(JSON.stringify(errmess));
-                }
-                break;
-            case "DeclineInv":
-                var ready = false;
-                wcl.forEach(cl => {
-                    if (cl.socket == client) {
-                        if (cl.id != cmess.id) { // Find sender.
-                            client.send(`{"error":004,"type":"error"}`);
-                            console.log(localisation["invalid-id"]);
-                            return;
-                        }
-                    }
-                });
-                for (let i = 0; i < wcl.length && !ready; i++) {
-                    if (wcl[i].name == cmess.invname) {
-                        wcl[i].socket.send(JSON.stringify(cmess));
-                        ready = true;
-                    }
-                }
-                for (let key in rcl) {
-                    if (rcl[key]) {
-                        for (let i = 0; i < rcl[key].players.length && !ready; i++) {
-                            if (rcl[key].players[i].name == cmess.invname) {
-                                rcl[key].players[i].socket.send(JSON.stringify(cmess));
-                                ready = true;
-                            }
-                        }
-                    }
-                }
-                if (ready == false) {
-                    let errmess = Message.Create({ id: cmess.id, name: cmess.name, err: "Cannot find player: " + cmess.invname }, "ErrInv");
-                    client.send(JSON.stringify(errmess));
-                }
-                break;
-            case "Ready":
-                let cli;
-                if (cmess.plinteam < cmess.team.length + 1) { // Team + player.
-                    client.send(JSON.stringify(Message.Create({ id: cmess.id, err: "Too big team" }, "ReadyErr")));
-                    return;
-                }
-                else {
+                    });
+                    break;
+                case "Invite":
                     var ready = false;
+                    wcl.forEach(cl => { // Find sender.
+                        if (cl.socket == client) {
+                            if (cl.id != cmess.id) {
+                                client.send(`{"error":004,"type":"error"}`);
+                                console.log(localisation["invalid-id"]);
+                                return;
+                            }
+                        }
+                    });
                     for (let i = 0; i < wcl.length && !ready; i++) {
-                        if (wcl[i].socket == client) {
+                        if (wcl[i].name == cmess.name) {
+                            wcl[i].socket.send(JSON.stringify(cmess));
+                            ready = true;
+                        }
+                    }
+                    /*for (let key in rcl) { // Player don't must be ready.
+                        if (rcl[key]) {
+                            for (let i = 0; i < rcl[key].players.length && !ready; i++){
+                                if (rcl[key].players[i].name == cmess.name){
+                                    rcl[key].players[i].socket.send(JSON.stringify(cmess));
+                                    ready = true;
+                                }
+                            }
+                        }
+                    }*/
+                    if (ready == false) {
+                        let errmess = Message.Create({ id: cmess.id, name: cmess.invname, err: "Cannot find player: " + cmess.name }, "ErrInv");
+                        client.send(JSON.stringify(errmess));
+                    }
+                    break;
+                case "AcceptInv": // Player don't must be ready.
+                    var ready = false;
+                    let pl;
+                    for (let i = 0; i < wcl.length && !ready; i++) {
+                        if (wcl[i].socket == client) { // Find sender.
                             if (wcl[i].id == cmess.id) {
-                                cli = wcl[i];
-                                ready = true;
+                                pl = wcl[i];
                             }
                             else {
                                 client.send(`{"error":004,"type":"error"}`);
@@ -465,78 +393,257 @@ wss.on("connection", (client) => {
                             }
                         }
                     }
-                    if (ready && cli) {
-                        let read = true;
-                        if (cli.data.team.length > 0) {
-                            for (let a = 0; a < cli.data.team.length && read; a++) {
-                                if (!cli.data.team[a].data.ready) {
-                                    read = false;
+                    for (let i = 0; i < wcl.length && !ready; i++) {
+                        if (wcl[i].name == cmess.invname) {
+                            wcl[i].socket.send(JSON.stringify(cmess));
+                            if (pl) {
+                                //setTimeout(() => {
+                                for (let a = 0; a < wcl[i].data.team.length; a++) { // Add player to team.
+                                    wcl[i].data.team[a].team.push(pl);
+                                    let jm = Message.Create({ id: cmess.id, jname: pl.name, name: wcl[i].data.team[a].name }, "Join");
+                                    wcl[i].data.team[a].socket.send(JSON.stringify(jm));
+                                    pl.team.push(wcl[i].data.team[a]);
+                                    pl.socket.send(JSON.stringify(Message.Create({ id: cmess.id, jname: wcl[i].data.team[a].name, name: pl.name }, "Join")));
+                                }
+                                //}, 500);
+                                wcl[i].data.team.push(pl);
+                                wcl[i].socket.send(JSON.stringify(Message.Create({ id: cmess.id, jname: pl.name, name: wcl[i].name }, "Join")));
+                                pl.data.team.push(wcl[i]);
+                                pl.socket.send(JSON.stringify(Message.Create({ id: cmess.id, jname: wcl[i].name, name: pl.name }, "Join")));
+                            }
+                            ready = true;
+                        }
+                    }
+                    /*for (let key in rcl) { // Player don't must be ready.
+                        if (rcl[key]) {
+                            for (let i = 0; i < rcl[key].players.length && !ready; i++) {
+                                if (rcl[key].players[i].name == cmess.invname) {
+                                    rcl[key].players[i].socket.send(JSON.stringify(cmess));
+                                    ready = true;
                                 }
                             }
                         }
-                        cli.data.ready = true;
-                        if (read) {
-                            if (rcl[cmess.gametype]) {
-                                rcl[cmess.gametype].players.push(cli);
-                                cli.data.team.forEach(pla => {
-                                    rcl[cmess.gametype].players.push(pla);
-                                });
+                    }*/
+                    if (ready == false) {
+                        let errmess = Message.Create({ id: cmess.id, name: cmess.name, err: "Cannot find player: " + cmess.invname }, "ErrInv");
+                        client.send(JSON.stringify(errmess));
+                    }
+                    break;
+                case "DeclineInv":
+                    var ready = false;
+                    wcl.forEach(cl => {
+                        if (cl.socket == client) {
+                            if (cl.id != cmess.id) { // Find sender.
+                                client.send(`{"error":004,"type":"error"}`);
+                                console.log(localisation["invalid-id"]);
+                                return;
                             }
-                            else {
-                                rcl[cmess.gametype] = { "players": [], "plnumb": cmess.plnumb, "plinteam": cmess.plinteam, "data": cmess.data };
-                                rcl[cmess.gametype].players.push(cli);
-                                cli.data.team.forEach(pla => {
-                                    rcl[cmess.gametype].players.push(pla);
-                                });
+                        }
+                    });
+                    for (let i = 0; i < wcl.length && !ready; i++) {
+                        if (wcl[i].name == cmess.invname) {
+                            wcl[i].socket.send(JSON.stringify(cmess));
+                            ready = true;
+                        }
+                    }
+                    for (let key in rcl) {
+                        if (rcl[key]) {
+                            for (let i = 0; i < rcl[key].players.length && !ready; i++) {
+                                if (rcl[key].players[i].name == cmess.invname) {
+                                    rcl[key].players[i].socket.send(JSON.stringify(cmess));
+                                    ready = true;
+                                }
                             }
-
-                            if (rcl[cmess.gametype].players.length >= rcl[cmess.gametype].plnumb) {
-                                let plwtt = []; // Players without team.
-                                let plwt = []; // Players with team.
-                                let pwst = []; // Players with small team.
-                                rcl[cmess.gametype].players.forEach(pla => {
-                                    if (pla.data.team.length == 0) {
-                                        plwtt.push(pla);
-                                    }
-                                    else {
-                                        plwt.push(pla);
-                                    }
-                                });
-                                let parr = [];
-                                if (plwt.length == 0) {
-                                    parr += rcl[cmess.gametype].players.slice(0, rcl[cmess.gametype].plnumb - 1);
-                                    rcl[cmess.gametype].players.splice(0, rcl[cmess.gametype].plnumb - 1);
-                                    if (rcl[cmess.gametype].players.length == 0) {
-                                        delete rcl[cmess.gametype];
-                                    }
+                        }
+                    }
+                    if (ready == false) {
+                        let errmess = Message.Create({ id: cmess.id, name: cmess.name, err: "Cannot find player: " + cmess.invname }, "ErrInv");
+                        client.send(JSON.stringify(errmess));
+                    }
+                    break;
+                case "Ready":
+                    let cli;
+                    if (cmess.plinteam < cmess.team.length + 1) { // Team + player.
+                        client.send(JSON.stringify(Message.Create({ id: cmess.id, err: "Too big team" }, "ReadyErr")));
+                        return;
+                    }
+                    else {
+                        var ready = false;
+                        for (let i = 0; i < wcl.length && !ready; i++) {
+                            if (wcl[i].socket == client) {
+                                if (wcl[i].id == cmess.id) {
+                                    cli = wcl[i];
+                                    ready = true;
                                 }
                                 else {
-                                    let pln1 = plwtt.length; // plwtt.
-                                    let pln2; // plwt.
-                                    let pln3; // pwst.
-                                    let tn; // Number of teams.
-                                    let ntn; // Number of teams we need.
-                                    for (let i = plwt.length - 1; i >= 0; i--) { // Fill array with players having small team.
-                                        if (plwt[i].data.team.length + 1 < rcl[cmess.gametype].plinteam) {
-                                            pwst.push(plwt[i]);
-                                            plwt.splice(i, 1);
+                                    client.send(`{"error":004,"type":"error"}`);
+                                    console.log(localisation["invalid-id"]);
+                                    return;
+                                }
+                            }
+                        }
+                        if (ready && cli) {
+                            let read = true;
+                            if (cli.data.team.length > 0) {
+                                for (let a = 0; a < cli.data.team.length && read; a++) {
+                                    if (!cli.data.team[a].data.ready) {
+                                        read = false;
+                                    }
+                                }
+                            }
+                            cli.data.ready = true;
+                            if (read) {
+                                if (rcl[cmess.gametype]) {
+                                    rcl[cmess.gametype].players.push(cli);
+                                    cli.data.team.forEach(pla => {
+                                        rcl[cmess.gametype].players.push(pla);
+                                    });
+                                }
+                                else {
+                                    rcl[cmess.gametype] = { "players": [], "plnumb": cmess.plnumb, "plinteam": cmess.plinteam, "data": cmess.data };
+                                    rcl[cmess.gametype].players.push(cli);
+                                    cli.data.team.forEach(pla => {
+                                        rcl[cmess.gametype].players.push(pla);
+                                    });
+                                }
+
+                                if (rcl[cmess.gametype].players.length >= rcl[cmess.gametype].plnumb) {
+                                    let plwtt = []; // Players without team.
+                                    let plwt = []; // Players with team.
+                                    let pwst = []; // Players with small team.
+                                    rcl[cmess.gametype].players.forEach(pla => {
+                                        if (pla.data.team.length == 0) {
+                                            plwtt.push(pla);
+                                        }
+                                        else {
+                                            plwt.push(pla);
+                                        }
+                                    });
+                                    let parr = [];
+                                    if (plwt.length == 0) {
+                                        parr += rcl[cmess.gametype].players.slice(0, rcl[cmess.gametype].plnumb - 1);
+                                        rcl[cmess.gametype].players.splice(0, rcl[cmess.gametype].plnumb - 1);
+                                        if (rcl[cmess.gametype].players.length == 0) {
+                                            delete rcl[cmess.gametype];
                                         }
                                     }
-                                    pln2 = plwt.length; pln3 = pwst.length; ntn = rcl[cmess.gametype].plnumb / rcl[cmess.gametype].plinteam;
-                                    if (pln1 == 0) {
-                                        if (pln2 == rcl[cmess.gametype].plnumb) {
-                                            for (let i = 0; i < pln2; i++) {
-                                                let p = plwt[i]; let r = false;
-                                                for (let a = 0; a < rcl[cmess.gametype].players.length && !r; a++) {
-                                                    if (rcl[cmess.gametype].players[a].id == p.id) {
-                                                        r = true;
-                                                        rcl[cmess.gametype].players.splice(a, 1);
-                                                        parr.push(p);
+                                    else {
+                                        let pln1 = plwtt.length; // plwtt.
+                                        let pln2; // plwt.
+                                        let pln3; // pwst.
+                                        let tn; // Number of teams.
+                                        let ntn; // Number of teams we need.
+                                        for (let i = plwt.length - 1; i >= 0; i--) { // Fill array with players having small team.
+                                            if (plwt[i].data.team.length + 1 < rcl[cmess.gametype].plinteam) {
+                                                pwst.push(plwt[i]);
+                                                plwt.splice(i, 1);
+                                            }
+                                        }
+                                        pln2 = plwt.length; pln3 = pwst.length; ntn = rcl[cmess.gametype].plnumb / rcl[cmess.gametype].plinteam;
+                                        if (pln1 == 0) {
+                                            if (pln2 == rcl[cmess.gametype].plnumb) {
+                                                for (let i = 0; i < pln2; i++) {
+                                                    let p = plwt[i]; let r = false;
+                                                    for (let a = 0; a < rcl[cmess.gametype].players.length && !r; a++) {
+                                                        if (rcl[cmess.gametype].players[a].id == p.id) {
+                                                            r = true;
+                                                            rcl[cmess.gametype].players.splice(a, 1);
+                                                            parr.push(p);
+                                                        }
                                                     }
                                                 }
                                             }
+                                            else {
+                                                let plwt2 = [];
+                                                let pwst2 = [];
+                                                for (let i = plwt.length - 1; i >= 0; i--) {
+                                                    let arr = [];
+                                                    let p = plwt[i];
+                                                    arr.push(p);
+                                                    p.data.team.forEach(pl => {
+                                                        let r = false;
+                                                        for (let a = 0; a < plwt.length && !r; a++) {
+                                                            if (pl.id == plwt[a].id) {
+                                                                r = true;
+                                                                plwt.splice(a, 1);
+                                                            }
+                                                        }
+                                                        arr.push(pl);
+                                                    });
+                                                    i = plwt.length - 1;
+                                                    plwt2.push(arr);
+                                                }
+                                                for (let i = pwst.length - 1; i >= 0; i--) {
+                                                    let arr = [];
+                                                    let p = pwst[i];
+                                                    arr.push(p);
+                                                    p.data.team.forEach(pl => {
+                                                        let r = false;
+                                                        for (let a = 0; a < pwst.length && !r; a++) {
+                                                            if (pl.id == pwst[a].id) {
+                                                                r = true;
+                                                                pwst.splice(a, 1);
+                                                            }
+                                                        }
+                                                        arr.push(pl);
+                                                    });
+                                                    i = pwst.length - 1;
+                                                    pwst2.push(arr);
+                                                }
+                                                // Now we have two arrays with lists of commands.
+                                                tn = plwt2.length;
+                                                // tn != ntn: plwt.length != plnumb.
+                                                if (tn >= ntn) {
+                                                    let ntn2 = ntn - ntn % 1;
+                                                    if (rcl[cmess.gametype].data.fill) {
+                                                        if (ntn2 < ntn) {
+                                                            ntn2 += 1;
+                                                        }
+                                                        if (tn >= ntn2) {
+                                                            for (let i = 0; i < ntn2; i++) {
+                                                                plwt2[i].forEach(pl => {
+                                                                    parr.push(pl);
+                                                                });
+                                                            }
+
+                                                            parr.forEach(pl => {
+                                                                let r = false;
+                                                                for (let i = 0; i < rcl[cmess.gametype].players.length && !r; i++) {
+                                                                    if (pl.id == rcl[cmess.gametype].players[i].id) {
+                                                                        r = true;
+                                                                        rcl[cmess.gametype].players.splice(i, 1);
+                                                                    }
+                                                                }
+                                                            });
+                                                        }
+                                                    }
+                                                    else {
+                                                        if (tn >= ntn2) {
+                                                            for (let i = 0; i < ntn2; i++) {
+                                                                plwt2[i].forEach(pl => {
+                                                                    parr.push(pl);
+                                                                });
+                                                            }
+
+                                                            parr.forEach(pl => {
+                                                                let r = false;
+                                                                for (let i = 0; i < rcl[cmess.gametype].players.length && !r; i++) {
+                                                                    if (pl.id == rcl[cmess.gametype].players[i].id) {
+                                                                        r = true;
+                                                                        rcl[cmess.gametype].players.splice(i, 1);
+                                                                    }
+                                                                }
+                                                            });
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            // If there are no players without team, we can't fill teams.
+                                            if (rcl[cmess.gametype].players.length == 0) {
+                                                delete rcl[cmess.gametype];
+                                            }
                                         }
-                                        else {
+                                        else { // pln != 0; pln2 + pln3 != 0.
                                             let plwt2 = [];
                                             let pwst2 = [];
                                             for (let i = plwt.length - 1; i >= 0; i--) {
@@ -573,166 +680,37 @@ wss.on("connection", (client) => {
                                                 i = pwst.length - 1;
                                                 pwst2.push(arr);
                                             }
-                                            // Now we have two arrays with lists of commands.
-                                            tn = plwt2.length;
-                                            // tn != ntn: plwt.length != plnumb.
-                                            if (tn >= ntn) {
-                                                let ntn2 = ntn - ntn % 1;
-                                                if (rcl[cmess.gametype].data.fill) {
-                                                    if (ntn2 < ntn) {
-                                                        ntn2 += 1;
-                                                    }
-                                                    if (tn >= ntn2) {
-                                                        for (let i = 0; i < ntn2; i++) {
-                                                            plwt2[i].forEach(pl => {
-                                                                parr.push(pl);
-                                                            });
-                                                        }
-
-                                                        parr.forEach(pl => {
-                                                            let r = false;
-                                                            for (let i = 0; i < rcl[cmess.gametype].players.length && !r; i++) {
-                                                                if (pl.id == rcl[cmess.gametype].players[i].id) {
-                                                                    r = true;
-                                                                    rcl[cmess.gametype].players.splice(i, 1);
-                                                                }
-                                                            }
-                                                        });
-                                                    }
-                                                }
-                                                else {
-                                                    if (tn >= ntn2) {
-                                                        for (let i = 0; i < ntn2; i++) {
-                                                            plwt2[i].forEach(pl => {
-                                                                parr.push(pl);
-                                                            });
-                                                        }
-
-                                                        parr.forEach(pl => {
-                                                            let r = false;
-                                                            for (let i = 0; i < rcl[cmess.gametype].players.length && !r; i++) {
-                                                                if (pl.id == rcl[cmess.gametype].players[i].id) {
-                                                                    r = true;
-                                                                    rcl[cmess.gametype].players.splice(i, 1);
-                                                                }
-                                                            }
-                                                        });
-                                                    }
-                                                }
+                                            pln2 = plwt2.length;
+                                            pln3 = pwst2.length;
+                                            let ntn2 = ntn - ntn % 1;
+                                            if (rcl[cmess.gametype].data.fill && ntn2 < ntn) {
+                                                ntn2 += 1;
                                             }
-                                        }
-                                        // If there are no players without team, we can't fill teams.
-                                        if (rcl[cmess.gametype].players.length == 0) {
-                                            delete rcl[cmess.gametype];
-                                        }
-                                    }
-                                    else { // pln != 0; pln2 + pln3 != 0.
-                                        let plwt2 = [];
-                                        let pwst2 = [];
-                                        for (let i = plwt.length - 1; i >= 0; i--) {
-                                            let arr = [];
-                                            let p = plwt[i];
-                                            arr.push(p);
-                                            p.data.team.forEach(pl => {
-                                                let r = false;
-                                                for (let a = 0; a < plwt.length && !r; a++) {
-                                                    if (pl.id == plwt[a].id) {
-                                                        r = true;
-                                                        plwt.splice(a, 1);
-                                                    }
-                                                }
-                                                arr.push(pl);
-                                            });
-                                            i = plwt.length - 1;
-                                            plwt2.push(arr);
-                                        }
-                                        for (let i = pwst.length - 1; i >= 0; i--) {
-                                            let arr = [];
-                                            let p = pwst[i];
-                                            arr.push(p);
-                                            p.data.team.forEach(pl => {
-                                                let r = false;
-                                                for (let a = 0; a < pwst.length && !r; a++) {
-                                                    if (pl.id == pwst[a].id) {
-                                                        r = true;
-                                                        pwst.splice(a, 1);
-                                                    }
-                                                }
-                                                arr.push(pl);
-                                            });
-                                            i = pwst.length - 1;
-                                            pwst2.push(arr);
-                                        }
-                                        pln2 = plwt2.length;
-                                        pln3 = pwst2.length;
-                                        let ntn2 = ntn - ntn % 1;
-                                        if (rcl[cmess.gametype].data.fill && ntn2 < ntn) {
-                                            ntn2 += 1;
-                                        }
-                                        let arr1 = plwt2.slice(0, plwt2.length - 1);
-                                        let arr2 = pwst2.slice(0, pwst2.length - 1); let arr22 = pwst2.slice(0, pwst2.length - 1);
-                                        let arr3 = plwtt.slice(0, plwtt.length - 1);
-                                        let th = ntn2 / 3 - ntn2 / 3 % 1; // 1/3 of ntn2.
-                                        let ap1 = [];
-                                        let ap2 = [];
-                                        let ap3 = [];
-                                        if (arr1.length >= th) {
-                                            ap1 = arr1.slice(0, th - 1); arr1.splice(0, th - 1);
-                                        }
-                                        else {
-                                            ap1 = arr1; arr1 = [];
-                                        }
-                                        for (let i = 0; i < arr2.length && i < th; i++) {
-                                            let a = arr2[i];
-                                            let ah = a.slice(0, a.length - 1);
-                                            if (rcl[cmess.gametype].plinteam - a.length > 1) {
-                                                let r = false;
-                                                for (let b = i + 1; b < arr2.length && !r; b++) {
-                                                    if (arr2[b].length + ah.length < rcl[cmess.gametype].plinteam) {
-                                                        ah += arr2[b];
-                                                        arr2.splice(b, 1);
-                                                    }
-                                                    else if (arr2[b].length + ah.length == rcl[cmess.gametype].plinteam) {
-                                                        ah += arr2[b];
-                                                        arr2.splice(b, 1);
-                                                        r = true;
-                                                    }
-                                                }
-                                            }
-                                            if (rcl[cmess.gametype].plinteam - ah.length == 1 && arr3.length > 0) {
-                                                ah.push(arr3[0]);
-                                                arr3.splice(0, 1);
-                                            }
-                                            if (ah.length == rcl[cmess.gametype].plinteam) {
-                                                arr2.splice(i, 1); i--;
-                                                ap2.push(ah);
-                                                arr22 = arr2.slice(0, arr2.length - 1);
+                                            let arr1 = plwt2.slice(0, plwt2.length - 1);
+                                            let arr2 = pwst2.slice(0, pwst2.length - 1); let arr22 = pwst2.slice(0, pwst2.length - 1);
+                                            let arr3 = plwtt.slice(0, plwtt.length - 1);
+                                            let th = ntn2 / 3 - ntn2 / 3 % 1; // 1/3 of ntn2.
+                                            let ap1 = [];
+                                            let ap2 = [];
+                                            let ap3 = [];
+                                            if (arr1.length >= th) {
+                                                ap1 = arr1.slice(0, th - 1); arr1.splice(0, th - 1);
                                             }
                                             else {
-                                                arr2 = arr22.slice(0, arr22.length - 1);
+                                                ap1 = arr1; arr1 = [];
                                             }
-                                        } // First and second arrays are filled.
-                                        let n = ntn2 - ap1.length - ap2.length;
-                                        if (arr3.length / rcl[cmess.gametype].plinteam - (arr3.length / rcl[cmess.gametype].plinteam % 1) >= n) {
-                                            for (let i = 0; i < n; i += rcl[cmess.gametype].plinteam) {
-                                                let ah = arr3.slice(i, i + rcl[cmess.gametype].plinteam);
-                                                ap3.push(ah);
-                                            }
-                                        }
-                                        else {
-                                            let a1 = [], a2 = [];
-                                            for (let i = 0; i < arr2.length && i < n; i++) {
+                                            for (let i = 0; i < arr2.length && i < th; i++) {
                                                 let a = arr2[i];
                                                 let ah = a.slice(0, a.length - 1);
                                                 if (rcl[cmess.gametype].plinteam - a.length > 1) {
                                                     let r = false;
                                                     for (let b = i + 1; b < arr2.length && !r; b++) {
                                                         if (arr2[b].length + ah.length < rcl[cmess.gametype].plinteam) {
-                                                            ah.concat(arr2[b]);
+                                                            ah += arr2[b];
                                                             arr2.splice(b, 1);
                                                         }
                                                         else if (arr2[b].length + ah.length == rcl[cmess.gametype].plinteam) {
-                                                            ah.concat(arr2[b]);
+                                                            ah += arr2[b];
                                                             arr2.splice(b, 1);
                                                             r = true;
                                                         }
@@ -744,233 +722,273 @@ wss.on("connection", (client) => {
                                                 }
                                                 if (ah.length == rcl[cmess.gametype].plinteam) {
                                                     arr2.splice(i, 1); i--;
-                                                    a1.push(ah);
+                                                    ap2.push(ah);
                                                     arr22 = arr2.slice(0, arr2.length - 1);
                                                 }
                                                 else {
                                                     arr2 = arr22.slice(0, arr22.length - 1);
                                                 }
-                                            }
-                                            ap2 += a1;
-                                            if (a1.length < n) {
-                                                a2 = arr1.slice(0, n - a1.length); arr1.splice(0, n - a1.length);
-                                                ap1.concat(a2);
-                                            }
-                                        }
-                                        let ap4 = [].concat(ap1, ap2, ap3);
-                                        if (ap4.length == ntn2) {
-                                            //parr += ap4;
-                                            ap4.forEach(tm => {
-                                                tm.forEach(memb => {
-                                                    parr.push(memb);
-                                                    for (let i = 0; i < tm.length; i++) {
-                                                        if (tm[i].socket != memb.socket && memb.data.team.find(obj => obj.socket == tm[i].socket) == undefined) {
-                                                            memb.data.team.push(tm[i]); tm[i].data.team.push(memb);
-                                                            memb.socket.send(JSON.stringify(Message.Create({ "name": memb.name, "jname": tm[i].name, "id": cmess.id }, "")));
-                                                            tm[i].socket.send(JSON.stringify(Message.Create({ "name": tm[i].name, "jname": memb.name, "id": cmess.id }, "")));
-                                                        }
-                                                    }
-                                                });
-                                            });
-                                            let r = false;
-                                            for (let i = 0; i < parr.length; i++) {
-                                                for (let a = 0; a < rcl[cmess.gametype].players.length && !r; a++) {
-                                                    if (rcl[cmess.gametype].players[a].id == parr[i].id) {
-                                                        rcl[cmess.gametype].players.splice(a, 1);
-                                                        r = true;
-                                                    }
+                                            } // First and second arrays are filled.
+                                            let n = ntn2 - ap1.length - ap2.length;
+                                            if (arr3.length / rcl[cmess.gametype].plinteam - (arr3.length / rcl[cmess.gametype].plinteam % 1) >= n) {
+                                                for (let i = 0; i < n; i += rcl[cmess.gametype].plinteam) {
+                                                    let ah = arr3.slice(i, i + rcl[cmess.gametype].plinteam);
+                                                    ap3.push(ah);
                                                 }
                                             }
-                                            if (rcl[cmess.gametype].players.length == 0) {
-                                                delete rcl[cmess.gametype];
+                                            else {
+                                                let a1 = [], a2 = [];
+                                                for (let i = 0; i < arr2.length && i < n; i++) {
+                                                    let a = arr2[i];
+                                                    let ah = a.slice(0, a.length - 1);
+                                                    if (rcl[cmess.gametype].plinteam - a.length > 1) {
+                                                        let r = false;
+                                                        for (let b = i + 1; b < arr2.length && !r; b++) {
+                                                            if (arr2[b].length + ah.length < rcl[cmess.gametype].plinteam) {
+                                                                ah.concat(arr2[b]);
+                                                                arr2.splice(b, 1);
+                                                            }
+                                                            else if (arr2[b].length + ah.length == rcl[cmess.gametype].plinteam) {
+                                                                ah.concat(arr2[b]);
+                                                                arr2.splice(b, 1);
+                                                                r = true;
+                                                            }
+                                                        }
+                                                    }
+                                                    if (rcl[cmess.gametype].plinteam - ah.length == 1 && arr3.length > 0) {
+                                                        ah.push(arr3[0]);
+                                                        arr3.splice(0, 1);
+                                                    }
+                                                    if (ah.length == rcl[cmess.gametype].plinteam) {
+                                                        arr2.splice(i, 1); i--;
+                                                        a1.push(ah);
+                                                        arr22 = arr2.slice(0, arr2.length - 1);
+                                                    }
+                                                    else {
+                                                        arr2 = arr22.slice(0, arr22.length - 1);
+                                                    }
+                                                }
+                                                ap2 += a1;
+                                                if (a1.length < n) {
+                                                    a2 = arr1.slice(0, n - a1.length); arr1.splice(0, n - a1.length);
+                                                    ap1.concat(a2);
+                                                }
+                                            }
+                                            let ap4 = [].concat(ap1, ap2, ap3);
+                                            if (ap4.length == ntn2) {
+                                                //parr += ap4;
+                                                ap4.forEach(tm => {
+                                                    tm.forEach(memb => {
+                                                        parr.push(memb);
+                                                        for (let i = 0; i < tm.length; i++) {
+                                                            if (tm[i].socket != memb.socket && memb.data.team.find(obj => obj.socket == tm[i].socket) == undefined) {
+                                                                memb.data.team.push(tm[i]); tm[i].data.team.push(memb);
+                                                                memb.socket.send(JSON.stringify(Message.Create({ "name": memb.name, "jname": tm[i].name, "id": cmess.id }, "")));
+                                                                tm[i].socket.send(JSON.stringify(Message.Create({ "name": tm[i].name, "jname": memb.name, "id": cmess.id }, "")));
+                                                            }
+                                                        }
+                                                    });
+                                                });
+                                                let r = false;
+                                                for (let i = 0; i < parr.length; i++) {
+                                                    for (let a = 0; a < rcl[cmess.gametype].players.length && !r; a++) {
+                                                        if (rcl[cmess.gametype].players[a].id == parr[i].id) {
+                                                            rcl[cmess.gametype].players.splice(a, 1);
+                                                            r = true;
+                                                        }
+                                                    }
+                                                }
+                                                if (rcl[cmess.gametype].players.length == 0) {
+                                                    delete rcl[cmess.gametype];
+                                                }
                                             }
                                         }
                                     }
-                                }
-                                if (parr.length != 0) {
-                                    let game = new Game(parr, cmess.gametype, rcl[cmess.gametype].plnumb, rcl[cmess.gametype].plinteam);
-                                    games.push(game);
-                                    let clfmess = [];
-                                    game.clients.forEach(cl => {
-                                        let clie = {
-                                            "id": cl.id,
-                                            "name": cl.name
-                                        };
-                                        clfmess.push(clie);
-                                    });
-                                    //setTimeout(() => {
+                                    if (parr.length != 0) {
+                                        let game = new Game(parr, cmess.gametype, rcl[cmess.gametype].plnumb, rcl[cmess.gametype].plinteam);
+                                        games.push(game);
+                                        let clfmess = [];
+                                        game.clients.forEach(cl => {
+                                            let clie = {
+                                                "id": cl.id,
+                                                "name": cl.name
+                                            };
+                                            clfmess.push(clie);
+                                        });
+                                        //setTimeout(() => {
                                         game.clients.forEach(cl => {
                                             cl.socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": rcl[cmess.gametype].plnumb, "plinteam": rcl[cmess.gametype].plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
                                         });
-                                    //}, 500);
+                                        //}, 500);
+                                    }
                                 }
                             }
                         }
-                    }
-                    else {
-                        client.send(JSON.stringify(Message.Create({ id: cmess.id, err: "Can't find player" }, "ReadyErr")));
-                        return;
-                    }
-                }
-                break;
-            case "NReady":
-                cli = undefined;
-                var ready = false;
-                for (let i = 0; i < wcl.length && !ready; i++) {
-                    if (wcl[i].socket == client) {
-                        if (wcl[i].id != cmess.id) {
-                            client.send(`{"error":004,"type":"error"}`);
-                            console.log(localisation["invalid-id"]);
+                        else {
+                            client.send(JSON.stringify(Message.Create({ id: cmess.id, err: "Can't find player" }, "ReadyErr")));
                             return;
                         }
-                        else {
-                            cli = wcl[i];
-                            ready = true;
+                    }
+                    break;
+                case "NReady":
+                    cli = undefined;
+                    var ready = false;
+                    for (let i = 0; i < wcl.length && !ready; i++) {
+                        if (wcl[i].socket == client) {
+                            if (wcl[i].id != cmess.id) {
+                                client.send(`{"error":004,"type":"error"}`);
+                                console.log(localisation["invalid-id"]);
+                                return;
+                            }
+                            else {
+                                cli = wcl[i];
+                                ready = true;
+                            }
                         }
                     }
-                }
-                if (!ready) {
-                    for (let key in rcl) {
-                        if (rcl[key]) {
-                            for (let i = 0; i < rcl[key].players.length && !ready; i++) {
-                                if (rcl[key].players[i].socket == client) {
-                                    if (rcl[key].players[i].id != cmess.id) {
-                                        client.send(`{"error":004,"type":"error"}`);
-                                        console.log(localisation["invalid-id"]);
-                                        return;
-                                    }
-                                    ready = true;
-                                    cli = rcl[key].players[i];
-                                    rcl[key].players.splice(i, 1);
-                                    if (cli.data.team.length != 0) {
-                                        for (let a = 0; a < cli.data.team.length; a++) {
-                                            let r = false;
-                                            for (let b = 0; b < rcl[key].players.length && !r; b++) {
-                                                if (cli.data.team[a].socket == rcl[key].players[b].socket) {
-                                                    rcl[key].players.splice(b, 1);
-                                                    r = true;
+                    if (!ready) {
+                        for (let key in rcl) {
+                            if (rcl[key]) {
+                                for (let i = 0; i < rcl[key].players.length && !ready; i++) {
+                                    if (rcl[key].players[i].socket == client) {
+                                        if (rcl[key].players[i].id != cmess.id) {
+                                            client.send(`{"error":004,"type":"error"}`);
+                                            console.log(localisation["invalid-id"]);
+                                            return;
+                                        }
+                                        ready = true;
+                                        cli = rcl[key].players[i];
+                                        rcl[key].players.splice(i, 1);
+                                        if (cli.data.team.length != 0) {
+                                            for (let a = 0; a < cli.data.team.length; a++) {
+                                                let r = false;
+                                                for (let b = 0; b < rcl[key].players.length && !r; b++) {
+                                                    if (cli.data.team[a].socket == rcl[key].players[b].socket) {
+                                                        rcl[key].players.splice(b, 1);
+                                                        r = true;
+                                                    }
+                                                }
+                                                if (rcl[key].players.length == 0) {
+                                                    delete rcl[key];
                                                 }
                                             }
-                                            if (rcl[key].players.length == 0) {
-                                                delete rcl[key];
-                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                if (cli) {
-                    cli.data.ready = false;
-                }
-                break;
-            case "LeaveTeam":
-                var ready = false;
-                let pla;
-                for (let i = 0; i < wcl.length && !ready; i++) {
-                    if (wcl[i].socket == client) { // Find sender.
-                        if (wcl[i].id == cmess.id) {
-                            pla = wcl[i];
-                            LeaveTeam(pla, cmess);
-                        }
-                        else {
-                            client.send(`{"error":004,"type":"error"}`);
-                            console.log(localisation["invalid-id"]);
-                            return;
+                    if (cli) {
+                        cli.data.ready = false;
+                    }
+                    break;
+                case "LeaveTeam":
+                    var ready = false;
+                    let pla;
+                    for (let i = 0; i < wcl.length && !ready; i++) {
+                        if (wcl[i].socket == client) { // Find sender.
+                            if (wcl[i].id == cmess.id) {
+                                pla = wcl[i];
+                                LeaveTeam(pla, cmess);
+                            }
+                            else {
+                                client.send(`{"error":004,"type":"error"}`);
+                                console.log(localisation["invalid-id"]);
+                                return;
+                            }
                         }
                     }
-                }
-                break;
-            case "LeaveGame":
-                var id = cmess.gid;
-                for (let i = 0; i < games.length; i++) {
-                    if (games[i].GameID == id) {
-                        let clind = games[i].clients.findIndex(obj => obj.socket == client);
-                        if (clind != -1) {
-                            let cl = games[i].clients[clind];
-                            if (cl && cl.id == cmess.id) {
-                                LeaveTeam(cl, Message.Create({ "id": cmess.id, "name": cmess.name }, "LeaveTeam"));
-                                //setTimeout(() => {
+                    break;
+                case "LeaveGame":
+                    var id = cmess.gid;
+                    for (let i = 0; i < games.length; i++) {
+                        if (games[i].GameID == id) {
+                            let clind = games[i].clients.findIndex(obj => obj.socket == client);
+                            if (clind != -1) {
+                                let cl = games[i].clients[clind];
+                                if (cl && cl.id == cmess.id) {
+                                    LeaveTeam(cl, Message.Create({ "id": cmess.id, "name": cmess.name }, "LeaveTeam"));
+                                    //setTimeout(() => {
                                     games[i].clients.forEach(cli => {
                                         if (cli.id != cl.id) {
                                             cli.socket.send(JSON.stringify(cmess));
                                         }
                                     });
-                                //}, 500);
-                                games[i].clients.splice(clind, 1);
-                                if (games[i].clients.length == 0) {
-                                    games.splice(i, 1);
+                                    //}, 500);
+                                    games[i].clients.splice(clind, 1);
+                                    if (games[i].clients.length == 0) {
+                                        games.splice(i, 1);
+                                    }
+                                    wcl.push(cl);
                                 }
-                                wcl.push(cl);
-                            }
-                            else {
-                                client.send(`{"error":004,"type":"error"}`);
-                                console.log(localisation["invalid-id"]);
-                                return;
+                                else {
+                                    client.send(`{"error":004,"type":"error"}`);
+                                    console.log(localisation["invalid-id"]);
+                                    return;
+                                }
                             }
                         }
                     }
-                }
-                break;
-            case "Action":
-                var id = cmess.gid;
-                for (let i = 0; i < games.length; i++) {
-                    if (games[i].GameID == id) {
-                        let clind = games[i].clients.findIndex(obj => obj.socket == client);
-                        if (clind != -1) {
-                            let cl = games[i].clients[clind];
-                            if (cl && cl.id == cmess.id) {
-                                //setTimeout(() => {
+                    break;
+                case "Action":
+                    var id = cmess.gid;
+                    for (let i = 0; i < games.length; i++) {
+                        if (games[i].GameID == id) {
+                            let clind = games[i].clients.findIndex(obj => obj.socket == client);
+                            if (clind != -1) {
+                                let cl = games[i].clients[clind];
+                                if (cl && cl.id == cmess.id) {
+                                    //setTimeout(() => {
                                     games[i].clients.forEach(cli => {
                                         if (cli.id != cl.id) {
                                             cli.socket.send(JSON.stringify(cmess));
                                         }
                                     });
-                                //}, 500);
-                            }
-                            else {
-                                client.send(`{"error":004,"type":"error"}`);
-                                console.log(localisation["invalid-id"]);
-                                return;
-                            }
-                        }
-                    }
-                }
-                break;
-            case "Send":
-                if (nclient.id != cmess.id) {
-                    client.send(`{"error":004,"type":"error"}`);
-                    console.log(localisation["invalid-id"]);
-                    return;
-                }
-                var ready = false;
-                for (let i = 0; i < wcl.length && !ready; i++) {
-                    if (wcl[i].name == cmess.name) {
-                        wcl[i].socket.send(JSON.stringify(cmess)); ready = true;
-                    }
-                }
-                if (!ready) {
-                    for (let key in rcl) {
-                        for (let i = 0; i < rcl[key].players.length && !ready; i++) {
-                            if (rcl[key].players[i].name == cmess.name) {
-                                rcl[key].players[i].socket.send(JSON.stringify(cmess)); ready = true;
+                                    //}, 500);
+                                }
+                                else {
+                                    client.send(`{"error":004,"type":"error"}`);
+                                    console.log(localisation["invalid-id"]);
+                                    return;
+                                }
                             }
                         }
                     }
-                }
-                if (!ready) {
-                    for (let i = 0; i < games.length && !ready; i++) {
-                        for (let b = 0; b < games[i].clients.length && !ready; b++) {
-                            if (games[i].clients[b].name == cmess.name) {
-                                games[i].clients[b].socket.send(JSON.stringify(cmess)); ready = true;
+                    break;
+                case "Send":
+                    if (nclient.id != cmess.id) {
+                        client.send(`{"error":004,"type":"error"}`);
+                        console.log(localisation["invalid-id"]);
+                        return;
+                    }
+                    var ready = false;
+                    for (let i = 0; i < wcl.length && !ready; i++) {
+                        if (wcl[i].name == cmess.name) {
+                            wcl[i].socket.send(JSON.stringify(cmess)); ready = true;
+                        }
+                    }
+                    if (!ready) {
+                        for (let key in rcl) {
+                            for (let i = 0; i < rcl[key].players.length && !ready; i++) {
+                                if (rcl[key].players[i].name == cmess.name) {
+                                    rcl[key].players[i].socket.send(JSON.stringify(cmess)); ready = true;
+                                }
                             }
                         }
                     }
-                }
-                break;
-            default:
-                break;
+                    if (!ready) {
+                        for (let i = 0; i < games.length && !ready; i++) {
+                            for (let b = 0; b < games[i].clients.length && !ready; b++) {
+                                if (games[i].clients[b].name == cmess.name) {
+                                    games[i].clients[b].socket.send(JSON.stringify(cmess)); ready = true;
+                                }
+                            }
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
     });
     client.on('close', () => {
@@ -1004,11 +1022,11 @@ wss.on("connection", (client) => {
                         cl = games[i].clients[b]; ready = true;
                         LeaveTeam(cl, Message.Create({ "id": cl.id, "name": cl.name }, "LeaveTeam"));
                         //setTimeout(() => {
-                            games[i].clients.forEach(cli => {
-                                if (cli.id != cl.id) {
-                                    cli.socket.send(JSON.stringify(Message.Create({ "id": cl.id, "name": cl.name, "gid": games[i].GameID }, "LeaveGame")));
-                                }
-                            });
+                        games[i].clients.forEach(cli => {
+                            if (cli.id != cl.id) {
+                                cli.socket.send(JSON.stringify(Message.Create({ "id": cl.id, "name": cl.name, "gid": games[i].GameID }, "LeaveGame")));
+                            }
+                        });
                         //}, 500);
                         games[i].clients.splice(i, 1);
                         if (games[i].clients.length == 0) {
