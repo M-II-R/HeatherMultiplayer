@@ -4,5 +4,5 @@ You need Node.js to run this server.
 1. Download source code from GitHub.
 2. If you've downloaded from .zip, extract files in a folder.
 3.  Open folder in a terminal.
-4. In terminal, type in "npm i" to install dependencies.
-5. Type in "npm start" or "node index.js" to start the server
+4. In terminal, type in **npm i** to install dependencies.
+5. Type in **npm start** or **node index.js** to start the server
