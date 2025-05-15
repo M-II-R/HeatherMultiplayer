@@ -6,5 +6,6 @@ You need Node.js to run this server.
 3.  Open folder in a terminal.
 4. In terminal, type in **npm i** to install dependencies.
 5. Type in **npm start** or **node index.js** to start the server.
+
 The server is ready to use. Now you need to know how to interact with it.
 ##
