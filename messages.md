@@ -59,3 +59,32 @@ If player accepts invitation, send this message (you can send it only if player 
   type: "DeclineInv"
 }
 </pre>
+
+If player wants to leave his team, send this message:
+<pre>
+{
+  id: number,
+  name: string, // Player's name.
+  type: "LeaveTeam"
+}
+</pre>
+
+If player wants to leave the game, send this message:
+<pre>
+{
+  id: number,
+  name: string, // Player's name.
+  gid: string, // gid - Game ID.
+  type: "LeaveGame"
+}
+</pre>
+
+To send a message to other player, use this:
+<pre>
+{
+  id: number,
+  name: string, // Name of receiver.
+  data: any, // Data to send.
+  type: "Send"
+}
+</pre>
