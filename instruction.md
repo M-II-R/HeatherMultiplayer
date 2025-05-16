@@ -24,5 +24,5 @@ Example of the structure:
 
 }
 </pre>
-To interact with server, client must send a password to it. (To learn how to set up a password, see below.)
+To interact with server, client must send a password to it. (To learn how to set up a password, see below.) The example of message with password is above. You don't have to send the id in the message with the password, but it is required for all other messages.
 ## Continuation will be here.
