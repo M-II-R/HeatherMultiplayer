@@ -1,5 +1,13 @@
 # This is a list of messages you can send to server and receive from it.
 ## Sended messages:
+The first message sent by player - password:
+<pre>
+{
+  id: number || undefined, // You haven't to sent player's id in the message with password.
+  passw: string, // The password.
+  type: "Password"
+}
+</pre>
 Change the name of player (only if player is not ready and is not in the game):
 <pre>
 {
