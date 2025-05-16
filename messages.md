@@ -1,6 +1,6 @@
 # This is a list of messages you can send to server and receive from it.
 ## Sended messages:
-Change the name of player:
+Change the name of player (only if player is not ready and is not in the game):
 <pre>
 {
   id: number,
@@ -30,12 +30,32 @@ Tell the server that player is not ready:
 }
 </pre>
 
-This server supports a teams system. To invite a player to your team, send this message:
+This server supports a team system. To invite a player to your team, send this message (you can send it only if player is not ready and is not in the game):
 <pre>
 {
   id: number,
   name: string, // Name of invitated client.
   invname: string, // Name of inviting client.
   type: "Invite"
+}
+</pre>
+
+If player accepts invitation, send this message (you can send it only if player is not ready and is not in the game):
+<pre>
+{
+  id: number,
+  name: string, // Name of invitated client.
+  invname: string, // Name of inviting client.
+  type: "AcceptInv"
+}
+</pre>
+
+If player accepts invitation, send this message (you can send it only if player is not in the game. It is recommended to not send it if player is ready):
+<pre>
+{
+  id: number,
+  name: string, // Name of invitated client.
+  invname: string, // Name of inviting client.
+  type: "DeclineInv"
 }
 </pre>
