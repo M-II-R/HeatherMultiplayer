@@ -25,4 +25,14 @@ Example of the structure:
 }
 </pre>
 To interact with server, client must send a password to it. (To learn how to set up a password, see below.) The example of message with password is above. You don't have to send the id in the message with the password, but it is required for all other messages.
+
+After checking the password client will get a message with JSON structure:
+<pre>
+{
+   id: number,
+   name: string,
+   type: "NewPlayer"
+}
+</pre>
+In this message, id is an identificator for client. Send this ID in every message. If it is incorrect, you will get this message: {"error":004,"type":"error"}. Name it is auto-created name for the client. It is used to search other players by their names. You can change the name by sending a message with type "SetName". You can find a list of types of messages in messages.md.
 ## Continuation will be here.
