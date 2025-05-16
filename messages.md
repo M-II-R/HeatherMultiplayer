@@ -106,3 +106,27 @@ To send a message to other player, use this:
   type: "Send"
 }
 </pre>
+## Received by player messages:
+When player's name is changed:
+<pre>
+{
+  id: number, // ID is not obligatory in server's messages.
+  name: string, // New name
+  type: "Name"
+}
+</pre>
+When player joins your team:
+<pre>
+{
+  jname: string, // Name of joining client.
+  name: string, // Name of client he joined.
+  type: "Join"
+}
+</pre>
+If an error appears when player is ready:
+<pre>
+{
+  err: string, // An error
+  type: "ReadyErr"
+}
+</pre>
