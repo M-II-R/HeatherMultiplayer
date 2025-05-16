@@ -158,7 +158,7 @@ class Message {
             mess.data = data.data;
             mess.gid = data.gid; // gid - Game ID.
         }
-        else if (type == "LeaveTeam") { // For server. Only if player is not ready.
+        else if (type == "LeaveTeam") { // For server and for players. Only if player is not ready.
             //mess.gametype = data.gametype;
             //mess.team = data.team; // Names.
             mess.name = data.name;
