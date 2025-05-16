@@ -15,9 +15,13 @@ Every message sended to server must be created using a template: it must be a JS
 Example of the structure:
 
 {
+
 id: 0,
+
 passw: 12345,
+
 type: "Password"
+
 }
 
 To interact with server, client must send a password to it. (To learn how to set up a password, see below.)
