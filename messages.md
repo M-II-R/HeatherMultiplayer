@@ -8,7 +8,7 @@ Change the name of player (only if player is not ready and is not in the game):
   type: "SetName"
 }
 </pre>
-If the name is already used by other player, the server will append a number to it.
+If the name is already used by other player, the server will append a number to it. If the player is in team, you must send this name to his teammates.
 
 Tell the server that player is ready:
 <pre>
