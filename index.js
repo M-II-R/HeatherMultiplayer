@@ -123,12 +123,12 @@ class Message {
             mess.jname = data.jname; // Name of joining client.
             mess.name = data.name; // Name of client he joined.
         }
-        else if (type == "Ready") { // Player is ready. For server. "plnumb" - a number of players in the game; "plinteam" - a number of players in team; "team" - an array with IDs of players in team.
+        else if (type == "Ready") { // Player is ready. For server. "plnumb" - a number of players in the game; "plinteam" - a number of players in team; "team" - number of players in team.
             mess.gametype = data.gametype;
             mess.plnumb = data.plnumb;
             mess.plinteam = data.plinteam;
-            mess.team = data.team; // Team - ID's of players in team.
-            mess.data = data.data;
+            mess.team = data.team; // Team - number of players in team.
+            mess.data = data.data; // Is not used.
         }
         else if (type == "ReadyErr") { // For player.
             mess.err = data.err;
@@ -150,7 +150,7 @@ class Message {
             //mess.ingame = data.ingame;
         }
         else if (type == "GameStart") { // Game is starting. For player. Send message to client. "plnumb" - a number of players in the game; "plinteam" - a number of players in team; "team" - an array with IDs of players in team.
-            mess.gametype = data.type;
+            mess.gametype = data.gametype;
             mess.players = data.players; // IDs and names.
             mess.plnumb = data.plnumb;
             mess.plinteam = data.plinteam;
@@ -463,7 +463,7 @@ wss.on("connection", (client) => {
                     break;
                 case "Ready":
                     let cli;
-                    if (cmess.plinteam < cmess.team.length + 1) { // Team + player.
+                    if (cmess.plinteam < cmess.team + 1) { // Team + player.
                         client.send(JSON.stringify(Message.Create({ id: cmess.id, err: "Too big team" }, "ReadyErr")));
                         return;
                     }
