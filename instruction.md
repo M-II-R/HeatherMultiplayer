@@ -13,9 +13,9 @@ The server is ready to use. Now you need to know how to interact with it.
 Every message sended to server must be created using a template: it must be a JSON string, representing a structure. General view of the structure: {data, type}, where data consists of numerous elements containing information about the message. You can create a message by converting the structure to JSON.
 
 Example of the structure:
-
+<pre>
 {
-
+   
    id: 0,
 
    passw: 12345,
@@ -23,6 +23,6 @@ Example of the structure:
    type: "Password"
 
 }
-
+</pre>
 To interact with server, client must send a password to it. (To learn how to set up a password, see below.)
 ## Continuation will be here.
