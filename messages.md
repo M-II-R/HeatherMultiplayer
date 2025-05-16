@@ -130,3 +130,16 @@ If an error appears when player is ready:
   type: "ReadyErr"
 }
 </pre>
+
+When the game starts:
+<pre>
+{
+  gametype: string,
+  players: array, // Array with structures: IDs and names.
+  plnumb: number,
+  plinteam: number,
+  gid: string, // Game ID.
+  type: "GameStart"
+}
+</pre>
+Player also can receive messages sent by other players: "Action", "DeclineInv", "LeaveGame", "LeaveTeam", "Send".
