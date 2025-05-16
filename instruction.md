@@ -16,11 +16,11 @@ Example of the structure:
 
 {
 
-  id: 0,
+   id: 0,
 
-  passw: 12345,
+   passw: 12345,
 
-  type: "Password"
+   type: "Password"
 
 }
 
