@@ -8,4 +8,9 @@ You need Node.js to run this server.
 5. Type in **npm start** or **node index.js** to start the server.
 
 The server is ready to use. Now you need to know how to interact with it.
+
+## Interaction
+Every message sended to server must be created using a template: it must be a JSON string, representing a structure. General view of the structure: {data, type}, where data consists of numerous elements containing information about the message.
+
+To interact with server, client must send a password to it. (To learn how to set up a password, see below.)
 ## Continuation will be here.
