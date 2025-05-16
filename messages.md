@@ -18,6 +18,16 @@ Change the name of player (only if player is not ready and is not in the game):
 </pre>
 If the name is already used by other player, the server will append a number to it. If the player is in team, you must send this name to his teammates.
 
+The message with player's action (send it only if the player is in the game):
+<pre>
+{
+  id: number,
+  name: string, // Player's name.
+  data: any, // Player's action.
+  type: "Action"
+}
+</pre>
+
 Tell the server that player is ready:
 <pre>
 {
