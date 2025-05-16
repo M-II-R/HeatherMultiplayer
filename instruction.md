@@ -35,4 +35,4 @@ After checking the password client will get a message with JSON structure:
 }
 </pre>
 In this message, id is an identificator for client. Send this ID in every message. If it is incorrect, you will get this message: {"error":004,"type":"error"}. Name it is auto-created name for the client. It is used to search other players by their names. You can change the name by sending a message with type "SetName". You can find a list of types of messages in messages.md.
-## Continuation will be here.
+## Environment variables
