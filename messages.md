@@ -142,4 +142,23 @@ When the game starts:
   type: "GameStart"
 }
 </pre>
+Error messages:
+<pre>
+{
+  error: number,
+  type: "error"
+}
+</pre>
+Error codes:
+
+1: Cannot format input.
+
+2: No data recieved.
+
+3: Invalid data.
+
+4: Wrong origin (sender).
+
+5: Packet too heavy.
+
 Player also can receive messages sent by other players: "Action", "DeclineInv", "LeaveGame", "LeaveTeam", "Send".
