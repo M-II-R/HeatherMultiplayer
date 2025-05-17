@@ -805,9 +805,10 @@ wss.on("connection", (client) => {
                                         }
                                     }
                                     if (parr.length != 0) {
-                                        let game = new Game(parr, cmess.gametype, rcl[cmess.gametype].plnumb, rcl[cmess.gametype].plinteam);
+                                        let game = new Game(parr.slice(0,parr.length), cmess.gametype, rcl[cmess.gametype].plnumb, rcl[cmess.gametype].plinteam);
                                         games.push(game);
                                         let clfmess = [];
+                                        console.log(JSON.stringify(game.clients));
                                         game.clients.forEach(cl => {
                                             let clie = {
                                                 "id": cl.id,
