@@ -275,7 +275,7 @@ function OnConnection(client) {
         }
     }
     name = CreateName(name);
-    let nclient = new Client(ID, client, name);
+    let nclient = new Client(ID, client, name, {});
     wcl.push(nclient);
     console.log(localisation["player-connected"] + ID + ")");
     let stms = Message.Create({ 'id': ID, 'name': name }, "NewPlayer");
