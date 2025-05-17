@@ -161,4 +161,5 @@ Error codes:
 
 5: Packet too heavy.
 
+
 Player also can receive messages sent by other players: "Action", "DeclineInv", "LeaveGame", "LeaveTeam", "Send".
