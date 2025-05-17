@@ -829,7 +829,7 @@ wss.on("connection", (client) => {
                                         });*/
                                         //setTimeout(() => {
                                         for (let i = 0; i < game.clients.length; i++) {
-                                            let cl = game.clients[i]; console.log(typeof(cl)); console.log(cl.isClient);
+                                            let cl = game.clients[i]; console.log(cl); console.log(cl.isClient);
                                             cl.socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": rcl[cmess.gametype].plnumb, "plinteam": rcl[cmess.gametype].plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
                                         }
                                         //}, 500);
