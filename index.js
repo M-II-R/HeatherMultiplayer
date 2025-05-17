@@ -808,14 +808,22 @@ wss.on("connection", (client) => {
                                         let game = new Game(parr.slice(0,parr.length), cmess.gametype, rcl[cmess.gametype].plnumb, rcl[cmess.gametype].plinteam);
                                         games.push(game);
                                         let clfmess = [];
-                                        console.log(JSON.stringify(game.clients));
-                                        game.clients.forEach(cl => {
+                                        console.log(typeof(game.clients));
+                                        for (let i = 0; i < game.clients.length; i++) {
+                                            let cl = game.clients[i];
                                             let clie = {
                                                 "id": cl.id,
                                                 "name": cl.name
                                             };
                                             clfmess.push(clie);
-                                        });
+                                        }
+                                        /*game.clients.forEach(cl => {
+                                            let clie = {
+                                                "id": cl.id,
+                                                "name": cl.name
+                                            };
+                                            clfmess.push(clie);
+                                        });*/
                                         //setTimeout(() => {
                                         game.clients.forEach(cl => {
                                             cl.socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": rcl[cmess.gametype].plnumb, "plinteam": rcl[cmess.gametype].plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
@@ -995,7 +1003,7 @@ wss.on("connection", (client) => {
     client.on('close', () => {
         let cl;
         if (client.passwiscorrect) {
-            var ready = false;
+            let ready = false;
             for (let i = 0; i < wcl.length && !ready; i++) {
                 if (wcl[i].socket == client) {
                     cl = wcl[i]; ready = true;
