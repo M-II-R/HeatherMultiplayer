@@ -993,51 +993,56 @@ wss.on("connection", (client) => {
     });
     client.on('close', () => {
         let cl;
-        var ready = false;
-        for (let i = 0; i < wcl.length && !ready; i++) {
-            if (wcl[i].socket == client) {
-                cl = wcl[i]; ready = true;
-                LeaveTeam(cl, Message.Create({ "id": cl.id, "name": cl.name }, "LeaveTeam"));
-                wcl.splice(i, 1);
-            }
-        }
-        if (!ready) {
-            for (let key in rcl) {
-                for (let i = 0; i < rcl[key].players.length && !ready; i++) {
-                    if (rcl[key].players[i].socket == client) {
-                        cl = rcl[key].players[i]; ready = true;
-                        LeaveTeam(cl, Message.Create({ "id": cl.id, "name": cl.name }, "LeaveTeam"));
-                        rcl[key].players.splice(i, 1);
-                        if (rcl[key].players.length == 0) {
-                            delete rcl[key];
-                        }
-                    }
+        if (client.passwiscorrect) {
+            var ready = false;
+            for (let i = 0; i < wcl.length && !ready; i++) {
+                if (wcl[i].socket == client) {
+                    cl = wcl[i]; ready = true;
+                    LeaveTeam(cl, Message.Create({ "id": cl.id, "name": cl.name }, "LeaveTeam"));
+                    wcl.splice(i, 1);
                 }
             }
-        }
-        if (!ready) {
-            for (let i = 0; i < games.length && !ready; i++) {
-                for (let b = 0; b < games[i].clients.length && !ready; b++) {
-                    if (games[i].clients[b].socket == client) {
-                        cl = games[i].clients[b]; ready = true;
-                        LeaveTeam(cl, Message.Create({ "id": cl.id, "name": cl.name }, "LeaveTeam"));
-                        //setTimeout(() => {
-                        games[i].clients.forEach(cli => {
-                            if (cli.id != cl.id) {
-                                cli.socket.send(JSON.stringify(Message.Create({ "id": cl.id, "name": cl.name, "gid": games[i].GameID }, "LeaveGame")));
+            if (!ready) {
+                for (let key in rcl) {
+                    for (let i = 0; i < rcl[key].players.length && !ready; i++) {
+                        if (rcl[key].players[i].socket == client) {
+                            cl = rcl[key].players[i]; ready = true;
+                            LeaveTeam(cl, Message.Create({ "id": cl.id, "name": cl.name }, "LeaveTeam"));
+                            rcl[key].players.splice(i, 1);
+                            if (rcl[key].players.length == 0) {
+                                delete rcl[key];
                             }
-                        });
-                        //}, 500);
-                        games[i].clients.splice(i, 1);
-                        if (games[i].clients.length == 0) {
-                            games.splice(i, 1);
                         }
                     }
                 }
             }
+            if (!ready) {
+                for (let i = 0; i < games.length && !ready; i++) {
+                    for (let b = 0; b < games[i].clients.length && !ready; b++) {
+                        if (games[i].clients[b].socket == client) {
+                            cl = games[i].clients[b]; ready = true;
+                            LeaveTeam(cl, Message.Create({ "id": cl.id, "name": cl.name }, "LeaveTeam"));
+                            //setTimeout(() => {
+                            games[i].clients.forEach(cli => {
+                                if (cli.id != cl.id) {
+                                    cli.socket.send(JSON.stringify(Message.Create({ "id": cl.id, "name": cl.name, "gid": games[i].GameID }, "LeaveGame")));
+                                }
+                            });
+                            //}, 500);
+                            games[i].clients.splice(i, 1);
+                            if (games[i].clients.length == 0) {
+                                games.splice(i, 1);
+                            }
+                        }
+                    }
+                }
+            }
+            if (ready) {
+                console.log(localisation["client-deleted"] + cl.id);
+            }
         }
-        if (ready) {
-            console.log(localisation["client-deleted"] + cl.id);
+        else {
+            console.log(localisation["client-deleted"] + "Not autorized");
         }
     });
 });
