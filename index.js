@@ -13,6 +13,7 @@ const passw = process.env.PASSWORD || "MyPassword836";
 
 let language = Intl.DateTimeFormat().resolvedOptions().locale.substring(0, 2);
 const i18n = require('./i18n');
+const localization = require("./i18n");
 const localisation = i18n[language];
 
 var wcl = []; // Waiting clients
@@ -820,6 +821,7 @@ wss.on("connection", (client) => {
                                             };
                                             clfmess.push(clie);
                                         }
+                                        console.log(localization["all-connected"]);
                                         /*game.clients.forEach(cl => {
                                             let clie = {
                                                 "id": cl.id,
