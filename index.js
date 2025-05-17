@@ -281,7 +281,7 @@ function OnConnection(client) {
     name = CreateName(name);
     let nclient = new Client(ID, client, name, {});
     wcl.push(nclient);
-    console.log(localisation["player-connected"] + ID + ")");
+    console.log(localisation["player-connect"] + ID + ")");
     let stms = Message.Create({ 'id': ID, 'name': name }, "NewPlayer");
     client.send(JSON.stringify(stms));
 }
@@ -842,7 +842,7 @@ wss.on("connection", (client) => {
                                             };
                                             clfmess.push(clie);
                                         }
-                                        console.log(localisation["all-connected"]);
+                                        console.log(localisation["all-connected"] + game.GameID);
                                         /*game.clients.forEach(cl => {
                                             let clie = {
                                                 "id": cl.id,
