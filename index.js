@@ -807,10 +807,10 @@ wss.on("connection", (client) => {
                                         }
                                     }
                                     if (parr.length != 0) {
-                                        let game = new Game(parr.slice(0, parr.length), cmess.gametype, rcl[cmess.gametype].plnumb, rcl[cmess.gametype].plinteam);
+                                        let game = new Game(parr, cmess.gametype, rcl[cmess.gametype].plnumb, rcl[cmess.gametype].plinteam);
                                         games.push(game);
                                         let clfmess = [];
-                                        console.log(typeof (game.clients));
+                                        //console.log(typeof (game.clients));
                                         for (let i = 0; i < game.clients.length; i++) {
                                             let cl = game.clients[i];
                                             let clie = {
@@ -829,7 +829,7 @@ wss.on("connection", (client) => {
                                         //setTimeout(() => {
                                         for (let i = 0; i < game.clients.length; i++) {
                                             let cl = game.clients[i];
-                                            let socket = cl.socket;
+                                            let socket = cl.socket; console.log(typeof(socket));
                                             socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": rcl[cmess.gametype].plnumb, "plinteam": rcl[cmess.gametype].plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
                                         }
                                         //}, 500);
