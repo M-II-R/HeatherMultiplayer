@@ -54,12 +54,13 @@ function CreateName(nm = "Player") {
         }
     }
     games.forEach(game => {
-        game.clients.forEach(client => {
+        for (let i = 0; i < game.clients.length; i++) {
+            let client = game.clients[i];
             let eqn = isEqual(nm, client.name)
             if (eqn != 0) {
                 arrhelp.push(eqn);
             }
-        });
+        }
     });
     arrhelp.sort((a, b) => a - b);
     if (arrhelp.length == 0) {
@@ -246,9 +247,10 @@ function OnConnection(client) {
         }
     }
     games.forEach(game => {
-        game.clients.forEach(client => {
+        for (let i = 0; i < game.clients.length; i++) {
+            let client = game.clients[i];
             arrhelp.push(client.id);
-        });
+        }
     });
 
     arrhelp.sort((a, b) => a - b);
@@ -805,10 +807,10 @@ wss.on("connection", (client) => {
                                         }
                                     }
                                     if (parr.length != 0) {
-                                        let game = new Game(parr.slice(0,parr.length), cmess.gametype, rcl[cmess.gametype].plnumb, rcl[cmess.gametype].plinteam);
+                                        let game = new Game(parr.slice(0, parr.length), cmess.gametype, rcl[cmess.gametype].plnumb, rcl[cmess.gametype].plinteam);
                                         games.push(game);
                                         let clfmess = [];
-                                        console.log(typeof(game.clients));
+                                        console.log(typeof (game.clients));
                                         for (let i = 0; i < game.clients.length; i++) {
                                             let cl = game.clients[i];
                                             let clie = {
@@ -825,9 +827,10 @@ wss.on("connection", (client) => {
                                             clfmess.push(clie);
                                         });*/
                                         //setTimeout(() => {
-                                        game.clients.forEach(cl => {
+                                        for (let i = 0; i < game.clients.length; i++) {
+                                            let cl = game.clients[i];
                                             cl.socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": rcl[cmess.gametype].plnumb, "plinteam": rcl[cmess.gametype].plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
-                                        });
+                                        }
                                         //}, 500);
                                     }
                                 }
