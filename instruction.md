@@ -39,3 +39,4 @@ In this message, id is an identificator for client. Send this ID in every messag
 This server uses some environment variables. With it you can configure the password for server and default names list. Just add some environment variables to Node.js process:
 1. PASSWORD: string.
 2. NAMES: JSON string representing an array of names (strings).
+3. PORT: a number of port for WebSocket.
