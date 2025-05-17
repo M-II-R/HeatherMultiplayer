@@ -883,36 +883,36 @@ wss.on("connection", (client) => {
                         }
                     }*/
                     //if (!ready) {
-                        for (let key in rcl) {
-                            if (rcl[key]) {
-                                for (let i = 0; i < rcl[key].players.length && !ready; i++) {
-                                    if (rcl[key].players[i].socket == client) {
-                                        if (rcl[key].players[i].id != cmess.id) {
-                                            client.send(`{"error":004,"type":"error"}`);
-                                            console.log(localisation["invalid-id"]);
-                                            return;
-                                        }
-                                        //ready = true;
-                                        cli = rcl[key].players[i]; cli.data.ready = false;
-                                        rcl[key].players.splice(i, 1);
-                                        if (cli.data.team.length != 0) {
-                                            for (let a = 0; a < cli.data.team.length; a++) {
-                                                let r = false;
-                                                for (let b = 0; b < rcl[key].players.length && !r; b++) {
-                                                    if (cli.data.team[a].socket == rcl[key].players[b].socket) {
-                                                        rcl[key].players.splice(b, 1);
-                                                        r = true;
-                                                    }
+                    for (let key in rcl) {
+                        if (rcl[key]) {
+                            for (let i = 0; i < rcl[key].players.length && !ready; i++) {
+                                if (rcl[key].players[i].socket == client) {
+                                    if (rcl[key].players[i].id != cmess.id) {
+                                        client.send(`{"error":004,"type":"error"}`);
+                                        console.log(localisation["invalid-id"]);
+                                        return;
+                                    }
+                                    //ready = true;
+                                    cli = rcl[key].players[i]; cli.data.ready = false;
+                                    rcl[key].players.splice(i, 1);
+                                    if (cli.data.team.length != 0) {
+                                        for (let a = 0; a < cli.data.team.length; a++) {
+                                            let r = false;
+                                            for (let b = 0; b < rcl[key].players.length && !r; b++) {
+                                                if (cli.data.team[a].socket == rcl[key].players[b].socket) {
+                                                    rcl[key].players.splice(b, 1);
+                                                    r = true;
                                                 }
-                                                if (rcl[key].players.length == 0) {
-                                                    delete rcl[key];
-                                                }
+                                            }
+                                            if (rcl[key].players.length == 0) {
+                                                delete rcl[key];
                                             }
                                         }
                                     }
                                 }
                             }
                         }
+                    }
                     //}
                     if (cli) {
                         cli.data.ready = false;
@@ -1066,10 +1066,11 @@ wss.on("connection", (client) => {
                             });
                             //}, 500);
                             games[i].clients.splice(i, 1);
-                            if (games[i].clients.length == 0) {
-                                games.splice(i, 1);
-                            }
+
                         }
+                    }
+                    if (games[i].clients.length == 0) {
+                        games.splice(i, 1);
                     }
                 }
             }
