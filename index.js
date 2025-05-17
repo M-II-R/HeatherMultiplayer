@@ -851,7 +851,6 @@ wss.on("connection", (client) => {
                                             clfmess.push(clie);
                                         });*/
                                         //setTimeout(() => {
-                                        console.log(game.clients.length);
                                         for (let i = 0; i < game.clients.length; i++) {
                                             let cl = game.clients[i];
                                             cl.socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": cmess.plnumb, "plinteam": cmess.plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
