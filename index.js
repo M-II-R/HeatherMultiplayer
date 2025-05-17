@@ -294,18 +294,18 @@ wss.on("connection", (client) => {
     client.on("message", (message) => {
         /**
          * Error codes:
-         * 001: Cannot format input.
-         * 002: No data recieved.
-         * 003: Invalid data.
-         * 004: Wrong origin (sender).
-         * 005: Packet too heavy.
+         * 1: Cannot format input.
+         * 2: No data recieved.
+         * 3: Invalid data.
+         * 4: Wrong origin (sender).
+         * 5: Packet too heavy.
          */
         if ((message.length > 1024)) {
-            client.send(`{"error":005, "type":"error"}`);
+            client.send(`{"error":5, "type":"error"}`);
             return;
         }
         else if (message.length == 0) {
-            client.send(`{"error":002, "type":"error"}`);
+            client.send(`{"error":2, "type":"error"}`);
             return;
         }
         let mess;
@@ -313,7 +313,7 @@ wss.on("connection", (client) => {
             mess = JSON.parse(message);
         }
         catch (err) {
-            client.send(`{"error":001,"type":"error"}`);
+            client.send(`{"error":1,"type":"error"}`);
             console.log(err);
             //tempsDeTraitement = (Date.now() - debutTraitement);
             return;
@@ -331,14 +331,14 @@ wss.on("connection", (client) => {
         else if (client.passwiscorrect) {
             switch (cmess.type) {
                 case "Invalid":
-                    client.send(`{"error":003,"type":"error"}`);
+                    client.send(`{"error":3,"type":"error"}`);
                     console.log(localisation["invalid-msg"]);
                     break;
                 case "SetName": // Name changing.
                     wcl.forEach(cl => {
                         if (cl.socket == client) { // Find sender.
                             if (cl.id != cmess.id) {
-                                client.send(`{"error":004,"type":"error"}`);
+                                client.send(`{"error":4,"type":"error"}`);
                                 console.log(localisation["invalid-id"]);
                                 return;
                             }
@@ -355,7 +355,7 @@ wss.on("connection", (client) => {
                     wcl.forEach(cl => { // Find sender.
                         if (cl.socket == client) {
                             if (cl.id != cmess.id) {
-                                client.send(`{"error":004,"type":"error"}`);
+                                client.send(`{"error":4,"type":"error"}`);
                                 console.log(localisation["invalid-id"]);
                                 return;
                             }
@@ -391,7 +391,7 @@ wss.on("connection", (client) => {
                                 pl = wcl[i];
                             }
                             else {
-                                client.send(`{"error":004,"type":"error"}`);
+                                client.send(`{"error":4,"type":"error"}`);
                                 console.log(localisation["invalid-id"]);
                                 return;
                             }
@@ -438,7 +438,7 @@ wss.on("connection", (client) => {
                     wcl.forEach(cl => {
                         if (cl.socket == client) {
                             if (cl.id != cmess.id) { // Find sender.
-                                client.send(`{"error":004,"type":"error"}`);
+                                client.send(`{"error":4,"type":"error"}`);
                                 console.log(localisation["invalid-id"]);
                                 return;
                             }
@@ -480,7 +480,7 @@ wss.on("connection", (client) => {
                                     ready = true;
                                 }
                                 else {
-                                    client.send(`{"error":004,"type":"error"}`);
+                                    client.send(`{"error":4,"type":"error"}`);
                                     console.log(localisation["invalid-id"]);
                                     return;
                                 }
@@ -850,12 +850,10 @@ wss.on("connection", (client) => {
                                             };
                                             clfmess.push(clie);
                                         });*/
-                                        //setTimeout(() => {
                                         for (let i = 0; i < game.clients.length; i++) {
                                             let cl = game.clients[i];
                                             cl.socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": cmess.plnumb, "plinteam": cmess.plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
                                         }
-                                        //}, 500);
                                     }
                                 }
                             }
@@ -872,7 +870,7 @@ wss.on("connection", (client) => {
                     /*for (let i = 0; i < wcl.length && !ready; i++) {
                         if (wcl[i].socket == client) {
                             if (wcl[i].id != cmess.id) {
-                                client.send(`{"error":004,"type":"error"}`);
+                                client.send(`{"error":4,"type":"error"}`);
                                 console.log(localisation["invalid-id"]);
                                 return;
                             }
@@ -888,7 +886,7 @@ wss.on("connection", (client) => {
                             for (let i = 0; i < rcl[key].players.length && !ready; i++) {
                                 if (rcl[key].players[i].socket == client) {
                                     if (rcl[key].players[i].id != cmess.id) {
-                                        client.send(`{"error":004,"type":"error"}`);
+                                        client.send(`{"error":4,"type":"error"}`);
                                         console.log(localisation["invalid-id"]);
                                         return;
                                     }
@@ -928,7 +926,7 @@ wss.on("connection", (client) => {
                                 LeaveTeam(pla, cmess);
                             }
                             else {
-                                client.send(`{"error":004,"type":"error"}`);
+                                client.send(`{"error":4,"type":"error"}`);
                                 console.log(localisation["invalid-id"]);
                                 return;
                             }
@@ -944,13 +942,11 @@ wss.on("connection", (client) => {
                                 let cl = games[i].clients[clind];
                                 if (cl && cl.id == cmess.id) {
                                     LeaveTeam(cl, Message.Create({ "id": cmess.id, "name": cmess.name }, "LeaveTeam"));
-                                    //setTimeout(() => {
                                     games[i].clients.forEach(cli => {
                                         if (cli.id != cl.id) {
                                             cli.socket.send(JSON.stringify(cmess));
                                         }
                                     });
-                                    //}, 500);
                                     games[i].clients.splice(clind, 1);
                                     if (games[i].clients.length == 0) {
                                         games.splice(i, 1);
@@ -958,7 +954,7 @@ wss.on("connection", (client) => {
                                     wcl.push(cl);
                                 }
                                 else {
-                                    client.send(`{"error":004,"type":"error"}`);
+                                    client.send(`{"error":4,"type":"error"}`);
                                     console.log(localisation["invalid-id"]);
                                     return;
                                 }
@@ -983,7 +979,7 @@ wss.on("connection", (client) => {
                                     //}, 500);
                                 }
                                 else {
-                                    client.send(`{"error":004,"type":"error"}`);
+                                    client.send(`{"error":4,"type":"error"}`);
                                     console.log(localisation["invalid-id"]);
                                     return;
                                 }
@@ -993,7 +989,7 @@ wss.on("connection", (client) => {
                     break;
                 case "Send":
                     if (nclient.id != cmess.id) {
-                        client.send(`{"error":004,"type":"error"}`);
+                        client.send(`{"error":4,"type":"error"}`);
                         console.log(localisation["invalid-id"]);
                         return;
                     }
