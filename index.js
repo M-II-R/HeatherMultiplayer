@@ -198,6 +198,7 @@ class Client {
         this.socket = socket;
         this.name = clname;
         this.data = data; // Team, game etc.
+        this.isClient = true;
         if (!this.data.team) {
             this.data.team = []; // Array with clients. 
         }
@@ -828,9 +829,8 @@ wss.on("connection", (client) => {
                                         });*/
                                         //setTimeout(() => {
                                         for (let i = 0; i < game.clients.length; i++) {
-                                            let cl = game.clients[i];
-                                            let socket = cl.socket; console.log(typeof(socket));
-                                            socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": rcl[cmess.gametype].plnumb, "plinteam": rcl[cmess.gametype].plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
+                                            let cl = game.clients[i]; console.log(typeof(cl)); console.log(cl.isClient);
+                                            cl.socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": rcl[cmess.gametype].plnumb, "plinteam": rcl[cmess.gametype].plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
                                         }
                                         //}, 500);
                                     }
