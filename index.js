@@ -501,17 +501,38 @@ wss.on("connection", (client) => {
                                     rcl[cmess.gametype].players.push(cli);
                                     cli.data.team.forEach(pla => {
                                         rcl[cmess.gametype].players.push(pla);
+                                        for (let i = 0, r = false; i < wcl.length && !r; i++) {
+                                            if (wcl[i].socket == pla.socket) {
+                                                wcl.splice(i, 1); r = true;
+                                            }
+                                        }
                                     });
+                                    for (let i = 0, r = false; i < wcl.length && !r; i++) {
+                                        if (wcl[i].socket == cli.socket) {
+                                            wcl.splice(i, 1); r = true;
+                                        }
+                                    }
                                 }
                                 else {
                                     rcl[cmess.gametype] = { "players": [], "plnumb": cmess.plnumb, "plinteam": cmess.plinteam, "data": cmess.data };
                                     rcl[cmess.gametype].players.push(cli);
                                     cli.data.team.forEach(pla => {
                                         rcl[cmess.gametype].players.push(pla);
+                                        for (let i = 0, r = false; i < wcl.length && !r; i++) {
+                                            if (wcl[i].socket == pla.socket) {
+                                                wcl.splice(i, 1); r = true;
+                                            }
+                                        }
                                     });
+                                    for (let i = 0, r = false; i < wcl.length && !r; i++) {
+                                        if (wcl[i].socket == cli.socket) {
+                                            wcl.splice(i, 1); r = true;
+                                        }
+                                    }
                                 }
 
                                 if (rcl[cmess.gametype].players.length >= rcl[cmess.gametype].plnumb) {
+                                    console.log(rcl[cmess.gametype].players.length);
                                     let plwtt = []; // Players without team.
                                     let plwt = []; // Players with team.
                                     let pwst = []; // Players with small team.
@@ -525,8 +546,8 @@ wss.on("connection", (client) => {
                                     });
                                     let parr = [];
                                     if (plwt.length == 0) {
-                                        parr = parr.concat(rcl[cmess.gametype].players.slice(0, rcl[cmess.gametype].plnumb - 1));
-                                        rcl[cmess.gametype].players.splice(0, rcl[cmess.gametype].plnumb - 1);
+                                        parr = parr.concat(rcl[cmess.gametype].players.slice(0, rcl[cmess.gametype].plnumb));
+                                        rcl[cmess.gametype].players.splice(0, rcl[cmess.gametype].plnumb);
                                         if (rcl[cmess.gametype].players.length == 0) {
                                             delete rcl[cmess.gametype];
                                         }
@@ -690,22 +711,22 @@ wss.on("connection", (client) => {
                                             if (rcl[cmess.gametype].data.fill && ntn2 < ntn) {
                                                 ntn2 += 1;
                                             }
-                                            let arr1 = plwt2.slice(0, plwt2.length - 1);
-                                            let arr2 = pwst2.slice(0, pwst2.length - 1); let arr22 = pwst2.slice(0, pwst2.length - 1);
-                                            let arr3 = plwtt.slice(0, plwtt.length - 1);
+                                            let arr1 = plwt2.slice(0, plwt2.length);
+                                            let arr2 = pwst2.slice(0, pwst2.length); let arr22 = pwst2.slice(0, pwst2.length);
+                                            let arr3 = plwtt.slice(0, plwtt.length);
                                             let th = ntn2 / 3 - ntn2 / 3 % 1; // 1/3 of ntn2.
                                             let ap1 = [];
                                             let ap2 = [];
                                             let ap3 = [];
                                             if (arr1.length >= th) {
-                                                ap1 = arr1.slice(0, th - 1); arr1.splice(0, th - 1);
+                                                ap1 = arr1.slice(0, th); arr1.splice(0, th);
                                             }
                                             else {
                                                 ap1 = arr1; arr1 = [];
                                             }
                                             for (let i = 0; i < arr2.length && i < th; i++) {
                                                 let a = arr2[i];
-                                                let ah = a.slice(0, a.length - 1);
+                                                let ah = a.slice(0, a.length);
                                                 if (rcl[cmess.gametype].plinteam - a.length > 1) {
                                                     let r = false;
                                                     for (let b = i + 1; b < arr2.length && !r; b++) {
@@ -727,10 +748,10 @@ wss.on("connection", (client) => {
                                                 if (ah.length == rcl[cmess.gametype].plinteam) {
                                                     arr2.splice(i, 1); i--;
                                                     ap2.push(ah);
-                                                    arr22 = arr2.slice(0, arr2.length - 1);
+                                                    arr22 = arr2.slice(0, arr2.length);
                                                 }
                                                 else {
-                                                    arr2 = arr22.slice(0, arr22.length - 1);
+                                                    arr2 = arr22.slice(0, arr22.length);
                                                 }
                                             } // First and second arrays are filled.
                                             let n = ntn2 - ap1.length - ap2.length;
@@ -744,7 +765,7 @@ wss.on("connection", (client) => {
                                                 let a1 = [], a2 = [];
                                                 for (let i = 0; i < arr2.length && i < n; i++) {
                                                     let a = arr2[i];
-                                                    let ah = a.slice(0, a.length - 1);
+                                                    let ah = a.slice(0, a.length);
                                                     if (rcl[cmess.gametype].plinteam - a.length > 1) {
                                                         let r = false;
                                                         for (let b = i + 1; b < arr2.length && !r; b++) {
@@ -766,10 +787,10 @@ wss.on("connection", (client) => {
                                                     if (ah.length == rcl[cmess.gametype].plinteam) {
                                                         arr2.splice(i, 1); i--;
                                                         a1.push(ah);
-                                                        arr22 = arr2.slice(0, arr2.length - 1);
+                                                        arr22 = arr2.slice(0, arr2.length);
                                                     }
                                                     else {
-                                                        arr2 = arr22.slice(0, arr22.length - 1);
+                                                        arr2 = arr22.slice(0, arr22.length);
                                                     }
                                                 }
                                                 ap2 = ap2.concat(a1);
@@ -809,7 +830,7 @@ wss.on("connection", (client) => {
                                         }
                                     }
                                     if (parr.length != 0) {
-                                        let game = new Game(parr, cmess.gametype, rcl[cmess.gametype].plnumb, rcl[cmess.gametype].plinteam);
+                                        let game = new Game(parr, cmess.gametype, cmess.plnumb, cmess.plinteam);
                                         games.push(game);
                                         let clfmess = [];
                                         //console.log(typeof (game.clients));
@@ -833,7 +854,7 @@ wss.on("connection", (client) => {
                                         console.log(game.clients.length);
                                         for (let i = 0; i < game.clients.length; i++) {
                                             let cl = game.clients[i];
-                                            cl.socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": rcl[cmess.gametype].plnumb, "plinteam": rcl[cmess.gametype].plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
+                                            cl.socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": cmess.plnumb, "plinteam": cmess.plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
                                         }
                                         //}, 500);
                                     }
@@ -848,8 +869,8 @@ wss.on("connection", (client) => {
                     break;
                 case "NReady":
                     cli = undefined;
-                    var ready = false;
-                    for (let i = 0; i < wcl.length && !ready; i++) {
+                    //var ready = false;
+                    /*for (let i = 0; i < wcl.length && !ready; i++) {
                         if (wcl[i].socket == client) {
                             if (wcl[i].id != cmess.id) {
                                 client.send(`{"error":004,"type":"error"}`);
@@ -861,8 +882,8 @@ wss.on("connection", (client) => {
                                 ready = true;
                             }
                         }
-                    }
-                    if (!ready) {
+                    }*/
+                    //if (!ready) {
                         for (let key in rcl) {
                             if (rcl[key]) {
                                 for (let i = 0; i < rcl[key].players.length && !ready; i++) {
@@ -872,8 +893,8 @@ wss.on("connection", (client) => {
                                             console.log(localisation["invalid-id"]);
                                             return;
                                         }
-                                        ready = true;
-                                        cli = rcl[key].players[i];
+                                        //ready = true;
+                                        cli = rcl[key].players[i]; cli.data.ready = false;
                                         rcl[key].players.splice(i, 1);
                                         if (cli.data.team.length != 0) {
                                             for (let a = 0; a < cli.data.team.length; a++) {
@@ -893,7 +914,7 @@ wss.on("connection", (client) => {
                                 }
                             }
                         }
-                    }
+                    //}
                     if (cli) {
                         cli.data.ready = false;
                     }
@@ -1025,10 +1046,10 @@ wss.on("connection", (client) => {
                             cl = rcl[key].players[i]; ready = true;
                             LeaveTeam(cl, Message.Create({ "id": cl.id, "name": cl.name }, "LeaveTeam"));
                             rcl[key].players.splice(i, 1);
-                            if (rcl[key].players.length == 0) {
-                                delete rcl[key];
-                            }
                         }
+                    }
+                    if (rcl[key].players.length == 0) {
+                        delete rcl[key];
                     }
                 }
             }
