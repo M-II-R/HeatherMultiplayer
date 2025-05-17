@@ -524,7 +524,7 @@ wss.on("connection", (client) => {
                                     });
                                     let parr = [];
                                     if (plwt.length == 0) {
-                                        parr += rcl[cmess.gametype].players.slice(0, rcl[cmess.gametype].plnumb - 1);
+                                        parr = parr.concat(rcl[cmess.gametype].players.slice(0, rcl[cmess.gametype].plnumb - 1));
                                         rcl[cmess.gametype].players.splice(0, rcl[cmess.gametype].plnumb - 1);
                                         if (rcl[cmess.gametype].players.length == 0) {
                                             delete rcl[cmess.gametype];
@@ -709,11 +709,11 @@ wss.on("connection", (client) => {
                                                     let r = false;
                                                     for (let b = i + 1; b < arr2.length && !r; b++) {
                                                         if (arr2[b].length + ah.length < rcl[cmess.gametype].plinteam) {
-                                                            ah += arr2[b];
+                                                            ah = ah.concat(arr2[b]);
                                                             arr2.splice(b, 1);
                                                         }
                                                         else if (arr2[b].length + ah.length == rcl[cmess.gametype].plinteam) {
-                                                            ah += arr2[b];
+                                                            ah = ah.concat(arr2[b]);
                                                             arr2.splice(b, 1);
                                                             r = true;
                                                         }
@@ -748,11 +748,11 @@ wss.on("connection", (client) => {
                                                         let r = false;
                                                         for (let b = i + 1; b < arr2.length && !r; b++) {
                                                             if (arr2[b].length + ah.length < rcl[cmess.gametype].plinteam) {
-                                                                ah.concat(arr2[b]);
+                                                                ah = ah.concat(arr2[b]);
                                                                 arr2.splice(b, 1);
                                                             }
                                                             else if (arr2[b].length + ah.length == rcl[cmess.gametype].plinteam) {
-                                                                ah.concat(arr2[b]);
+                                                                ah = ah.concat(arr2[b]);
                                                                 arr2.splice(b, 1);
                                                                 r = true;
                                                             }
@@ -771,10 +771,10 @@ wss.on("connection", (client) => {
                                                         arr2 = arr22.slice(0, arr22.length - 1);
                                                     }
                                                 }
-                                                ap2 += a1;
+                                                ap2 = ap2.concat(a1);
                                                 if (a1.length < n) {
                                                     a2 = arr1.slice(0, n - a1.length); arr1.splice(0, n - a1.length);
-                                                    ap1.concat(a2);
+                                                    ap1 = ap1.concat(a2);
                                                 }
                                             }
                                             let ap4 = [].concat(ap1, ap2, ap3);
@@ -809,7 +809,7 @@ wss.on("connection", (client) => {
                                     }
                                     if (parr.length != 0) {
                                         let game = new Game(parr, cmess.gametype, rcl[cmess.gametype].plnumb, rcl[cmess.gametype].plinteam);
-                                        games.push(game); console.log(parr[0]);
+                                        games.push(game);
                                         let clfmess = [];
                                         //console.log(typeof (game.clients));
                                         for (let i = 0; i < game.clients.length; i++) {
