@@ -130,7 +130,7 @@ class Message {
             mess.plnumb = data.plnumb;
             mess.plinteam = data.plinteam;
             mess.team = data.team; // Team - number of players in team.
-            mess.data = data.data; // Is not used.
+            mess.data = data.data; // data.fill.
         }
         else if (type == "ReadyErr") { // For player.
             mess.err = data.err;
