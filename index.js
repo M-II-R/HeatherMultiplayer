@@ -7,9 +7,16 @@ console.log("You can find source code at https://github.com/M-II-R/HeatherMultip
 const WebSocket = require("ws");
 const crypto = require("crypto");
 const express = require("express");
+const DB = process.env.STORAGE && process.env.STORAGE != "NONE"? require("./storage") : undefined;
+let USEDB = false;
+if (process.env.STORAGE && process.env.STORAGE != "NONE") {
+    USEDB = true;
+}
 const INDEX = '/index.html';
 const names = process.env.NAMES != undefined ? JSON.parse(process.env.NAMES) : ["Dark Knight", "Dancing Devil", "Crasy Scientist", "Carefree Angel", "Rose With Gun", "Annihilator", "Sly"]; // Auto-names for players.
 const passw = process.env.PASSWORD || "MyPassword836";
+const time = process.env.TIME != undefined ? Number(process.env.TIME) : 86400000; // Default - 24 hours.
+const MAXTIME = process.env.MAXTIME != undefined ? Number(process.env.MAXTIME) : 2678400000;
 
 let language = Intl.DateTimeFormat().resolvedOptions().locale.substring(0, 2);
 const i18n = require('./i18n');
@@ -37,11 +44,20 @@ function isEqual(name1 = "", name2 = "") {
 }
 function CreateName(nm = "Player") {
     let namenumber = 2;
-    let arrhelp = [];
+    let arrhelp = new Set();
+    if (USEDB) {
+        const namesarr = DB.Names();
+        namesarr.forEach(name => {
+            let eqn = isEqual(nm, name);
+            if (eqn != 0) {
+                arrhelp.add(eqn);
+            }
+        });
+    }
     wcl.forEach(cl => {
-        let eqn = isEqual(nm, cl.name)
+        let eqn = isEqual(nm, cl.name);
         if (eqn != 0) {
-            arrhelp.push(eqn);
+            arrhelp.add(eqn);
         }
     });
     for (let key in rcl) {
@@ -49,7 +65,7 @@ function CreateName(nm = "Player") {
             rcl[key].players.forEach(player => {
                 let eqn = isEqual(nm, player.name)
                 if (eqn != 0) {
-                    arrhelp.push(eqn);
+                    arrhelp.add(eqn);
                 }
             });
         }
@@ -59,18 +75,19 @@ function CreateName(nm = "Player") {
             let client = game.clients[i];
             let eqn = isEqual(nm, client.name)
             if (eqn != 0) {
-                arrhelp.push(eqn);
+                arrhelp.add(eqn);
             }
         }
     });
-    arrhelp.sort((a, b) => a - b);
-    if (arrhelp.length == 0) {
+    if (arrhelp.size == 0) {
         return nm;
     }
     else {
+        let arr = [...arrhelp];
+        arr.sort((a, b) => a - b);
         let r = false;
-        for (let i = 0; i < arrhelp.length && !r; i++) {
-            let num = arrhelp[i];
+        for (let i = 0; i < arr.length && !r; i++) {
+            let num = arr[i];
             if (namenumber < num) {
                 r = true;
             }
@@ -170,22 +187,34 @@ class Message {
             mess.name = data.name;
             //mess.team = data.team;
         }
-        else if (type == "Send") {
+        else if (type == "Send") { // For server and for player.
             mess.name = data.name; // Name of receiver.
             mess.data = data.data; // Data to send.
         }
-
-        // Now is not realised.
-
-        /*else if (type == "Write") { // Write data to file. For server.
-            mess.what = data.what;
-            mess.data = data.data;
+        else if (type == "Register") { // For server. Only if player is not ready.
+            mess.name = data.name;
+            mess.passw = data.passw;
         }
-        else if (type == "Read") { // Read data from storage. For server.
+        else if (type == "LogIn") { // For server. Only if player is not ready.
+            mess.name = data.name;
+            mess.passw = data.passw;
+        }
+        else if (type == "RemoveAcc") { // For server. Only if player is not ready.
+            mess.name = data.name;
+            mess.passw = data.passw;
+        }
+        else if (type == "LoggedIn") { // For player.
+            mess.success = data.success;
+        }
+        else if (type == "Read") { // For server. Read data from storage.
+            mess.name = data.name;
+            mess.what = data.what; // Type of data (e. g. score).
+        }
+        else if (type == "Write") { // For server. Write data to storage.
+            mess.name = data.name;
             mess.what = data.what;
-            mess.ingame = data.ingame;
-        }*/
-
+            mess.data = data.data; // Data to write.
+        }
         else { // If the message is incorrect.
             mess.type = "Invalid";
         }
@@ -234,6 +263,7 @@ function LeaveTeam(pla, cmess) {
     });
     pla.data.team = [];
 }
+
 function OnConnection(client) {
     let ID = 0;
     let arrhelp = [];
@@ -315,7 +345,6 @@ wss.on("connection", (client) => {
         catch (err) {
             client.send(`{"error":1,"type":"error"}`);
             console.log(err);
-            //tempsDeTraitement = (Date.now() - debutTraitement);
             return;
         }
         let cmess = Message.Create(mess, mess.type);
@@ -367,16 +396,6 @@ wss.on("connection", (client) => {
                             ready = true;
                         }
                     }
-                    /*for (let key in rcl) { // Player don't must be ready.
-                        if (rcl[key]) {
-                            for (let i = 0; i < rcl[key].players.length && !ready; i++){
-                                if (rcl[key].players[i].name == cmess.name){
-                                    rcl[key].players[i].socket.send(JSON.stringify(cmess));
-                                    ready = true;
-                                }
-                            }
-                        }
-                    }*/
                     if (ready == false) {
                         let errmess = Message.Create({ id: cmess.id, name: cmess.invname, err: "Cannot find player: " + cmess.name }, "ErrInv");
                         client.send(JSON.stringify(errmess));
@@ -418,16 +437,6 @@ wss.on("connection", (client) => {
                             ready = true;
                         }
                     }
-                    /*for (let key in rcl) { // Player don't must be ready.
-                        if (rcl[key]) {
-                            for (let i = 0; i < rcl[key].players.length && !ready; i++) {
-                                if (rcl[key].players[i].name == cmess.invname) {
-                                    rcl[key].players[i].socket.send(JSON.stringify(cmess));
-                                    ready = true;
-                                }
-                            }
-                        }
-                    }*/
                     if (ready == false) {
                         let errmess = Message.Create({ id: cmess.id, name: cmess.name, err: "Cannot find player: " + cmess.invname }, "ErrInv");
                         client.send(JSON.stringify(errmess));
@@ -801,7 +810,6 @@ wss.on("connection", (client) => {
                                             }
                                             let ap4 = [].concat(ap1, ap2, ap3);
                                             if (ap4.length == ntn2) {
-                                                //parr += ap4;
                                                 ap4.forEach(tm => {
                                                     tm.forEach(memb => {
                                                         parr.push(memb);
@@ -833,7 +841,6 @@ wss.on("connection", (client) => {
                                         let game = new Game(parr, cmess.gametype, cmess.plnumb, cmess.plinteam);
                                         games.push(game);
                                         let clfmess = [];
-                                        //console.log(typeof (game.clients));
                                         for (let i = 0; i < game.clients.length; i++) {
                                             let cl = game.clients[i];
                                             let clie = {
@@ -843,13 +850,6 @@ wss.on("connection", (client) => {
                                             clfmess.push(clie);
                                         }
                                         console.log(localisation["all-connected"] + game.GameID);
-                                        /*game.clients.forEach(cl => {
-                                            let clie = {
-                                                "id": cl.id,
-                                                "name": cl.name
-                                            };
-                                            clfmess.push(clie);
-                                        });*/
                                         for (let i = 0; i < game.clients.length; i++) {
                                             let cl = game.clients[i];
                                             cl.socket.send(JSON.stringify(Message.Create({ "id": cmess.id, "players": clfmess, "plnumb": cmess.plnumb, "plinteam": cmess.plinteam, /*"team":*/ "data": "", "gid": game.GameID }, "GameStart")));
@@ -866,21 +866,6 @@ wss.on("connection", (client) => {
                     break;
                 case "NReady":
                     cli = undefined;
-                    //var ready = false;
-                    /*for (let i = 0; i < wcl.length && !ready; i++) {
-                        if (wcl[i].socket == client) {
-                            if (wcl[i].id != cmess.id) {
-                                client.send(`{"error":4,"type":"error"}`);
-                                console.log(localisation["invalid-id"]);
-                                return;
-                            }
-                            else {
-                                cli = wcl[i];
-                                ready = true;
-                            }
-                        }
-                    }*/
-                    //if (!ready) {
                     for (let key in rcl) {
                         if (rcl[key]) {
                             for (let i = 0; i < rcl[key].players.length && !ready; i++) {
@@ -890,7 +875,6 @@ wss.on("connection", (client) => {
                                         console.log(localisation["invalid-id"]);
                                         return;
                                     }
-                                    //ready = true;
                                     cli = rcl[key].players[i]; cli.data.ready = false;
                                     rcl[key].players.splice(i, 1);
                                     if (cli.data.team.length != 0) {
@@ -911,7 +895,6 @@ wss.on("connection", (client) => {
                             }
                         }
                     }
-                    //}
                     if (cli) {
                         cli.data.ready = false;
                     }
@@ -970,13 +953,11 @@ wss.on("connection", (client) => {
                             if (clind != -1) {
                                 let cl = games[i].clients[clind];
                                 if (cl && cl.id == cmess.id) {
-                                    //setTimeout(() => {
                                     games[i].clients.forEach(cli => {
                                         if (cli.id != cl.id) {
                                             cli.socket.send(JSON.stringify(cmess));
                                         }
                                     });
-                                    //}, 500);
                                 }
                                 else {
                                     client.send(`{"error":4,"type":"error"}`);
@@ -988,11 +969,6 @@ wss.on("connection", (client) => {
                     }
                     break;
                 case "Send":
-                    if (nclient.id != cmess.id) {
-                        client.send(`{"error":4,"type":"error"}`);
-                        console.log(localisation["invalid-id"]);
-                        return;
-                    }
                     var ready = false;
                     for (let i = 0; i < wcl.length && !ready; i++) {
                         if (wcl[i].name == cmess.name) {
@@ -1016,6 +992,124 @@ wss.on("connection", (client) => {
                                 }
                             }
                         }
+                    }
+                    break;
+                case "Register":
+                    for (let i = 0, r = false; i < wcl.length && !r; i++) {
+                        let cl = wcl[i];
+                        if (cl.socket == client) { // Find sender.
+                            if (cl.id != cmess.id) {
+                                client.send(`{"error":4,"type":"error"}`);
+                                console.log(localisation["invalid-id"]);
+                                return;
+                            }
+                            else {
+                                if (USEDB) {
+                                    let successful = DB.Reg(cmess.name, cmess.passw);
+                                    successful.then(result => {
+                                        if (!result.isErr) {
+                                            client.send(JSON.stringify(Message.Create({ id: cmess.id, success: result }, "LoggedIn")));
+                                        }
+                                        else {
+                                            client.send(JSON.stringify(Message.Create({ id: cmess.id, success: false }, "LoggedIn")));
+                                        }
+                                    });
+                                }
+                                else {
+                                    client.send(JSON.stringify(Message.Create({ id: cmess.id, success: false }, "LoggedIn")));
+                                }
+
+                            }
+                        }
+                    }
+                    break;
+                case "LogIn":
+                    for (let i = 0, r = false; i < wcl.length && !r; i++) {
+                        let cl = wcl[i];
+                        if (cl.socket == client) { // Find sender.
+                            if (cl.id != cmess.id) {
+                                client.send(`{"error":4,"type":"error"}`);
+                                console.log(localisation["invalid-id"]);
+                                return;
+                            }
+                            else {
+                                if (USEDB) {
+                                    let successful = DB.LogIn(cmess.name, cmess.passw);
+                                    successful.then(result => {
+                                        if (!result.isErr) {
+                                            client.send(JSON.stringify(Message.Create({ id: cmess.id, success: result }, "LoggedIn")));
+                                        }
+                                        else {
+                                            client.send(JSON.stringify(Message.Create({ id: cmess.id, success: false }, "LoggedIn")));
+                                        }
+                                    });
+                                }
+                                else {
+                                    client.send(JSON.stringify(Message.Create({ id: cmess.id, success: false }, "LoggedIn")));
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case "RemoveAcc":
+                    for (let i = 0, r = false; i < wcl.length && !r; i++) {
+                        let cl = wcl[i];
+                        if (cl.socket == client) { // Find sender.
+                            if (cl.id != cmess.id) {
+                                client.send(`{"error":4,"type":"error"}`);
+                                console.log(localisation["invalid-id"]);
+                                return;
+                            }
+                            else {
+                                if (USEDB) {
+                                    DB.Rem(cmess.name, cmess.passw);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case "Write": // Maybe I should check if player writes his data or not?
+                    if (USEDB) {
+                        DB.Write(cmess.name, cmess.what, cmess.data);
+                    }
+                    /*let sender;
+                    for (let i = 0; i < wcl.length && !sender; i++) {
+                        if (wcl[i].socket == client) {
+                            if (wcl[i].id == cmess.id) {
+                                sender = wcl[i];
+                            }
+                            else {
+                                client.send(`{"error":4,"type":"error"}`);
+                                console.log(localisation["invalid-id"]);
+                                return;
+                            }
+                        }
+                    }
+                    if (!sender) {
+                        for (let key in rcl) {
+                            for (let i = 0; i < rcl[key].players.length && !sender; i++) {
+                                if (rcl[key].players[i].socket == client) {
+                                    rcl[key].players[i].socket.send(JSON.stringify(cmess));
+                                }
+                            }
+                        }
+                    }
+                    if (!sender) {
+                        for (let i = 0; i < games.length && !sender; i++) {
+                            for (let b = 0; b < games[i].clients.length && !sender; b++) {
+                                if (games[i].clients[b].name == cmess.name) {
+                                    games[i].clients[b].socket.send(JSON.stringify(cmess)); sender = true;
+                                }
+                            }
+                        }
+                    }*/
+                    break;
+                case "Read":
+                    if (USEDB) {
+                        let answ = DB.Read(cmess.name, cmess.what);
+                        answ.then(result => {
+                            client.send(JSON.stringify(Message.Create({ id: cmess.id, what: cmess.what, data: result }, "AnswGet")));
+                        });
                     }
                     break;
                 default:
@@ -1079,19 +1173,29 @@ wss.on("connection", (client) => {
         }
     });
 });
+
 let wsState = "closed";
 wss.on("listening", () => {
     wsState = "listening";
-})
+});
 
 wss.on("close", () => {
     wsState = "closed";
-})
+});
 
+let timerId;
+if (USEDB) { 
+    timerId = setInterval(() => {
+        DB.Clean (MAXTIME);
+    }, time);
+}
 
 process.on("exit", (code) => {
     // Close the server.
     wss.close();
+    if (USEDB) {
+        clearInterval(timerId);
+    }
     wcl = [];
     rcl = {};
     games = [];
