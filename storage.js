@@ -132,8 +132,9 @@ switch (process.env.STORAGE) {
         }
         break;
     case "LEVEL":
-        stbackend = require("level");
-        storage.db = new stbackend('./players-db', { valueEncoding: 'json' });
+        const {Level} = require("level");
+        stbackend = Level;
+        storage.db = new Level('./players-db', { valueEncoding: 'json' });
         storage.Read = async function (name, data) {
             try {
                 return await this.db.get(name)[data];
