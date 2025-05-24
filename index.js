@@ -7,7 +7,8 @@ console.log("You can find source code at https://github.com/M-II-R/HeatherMultip
 const WebSocket = require("ws");
 const crypto = require("crypto");
 const express = require("express");
-const DB = process.env.STORAGE && process.env.STORAGE != "NONE"? require("./storage") : undefined;
+require("dotenv").config();
+const DB = process.env.STORAGE && process.env.STORAGE != "NONE" ? require("./storage") : undefined;
 let USEDB = false;
 if (process.env.STORAGE && process.env.STORAGE != "NONE") {
     USEDB = true;
@@ -20,7 +21,6 @@ const MAXTIME = process.env.MAXTIME != undefined ? Number(process.env.MAXTIME) :
 
 let language = Intl.DateTimeFormat().resolvedOptions().locale.substring(0, 2);
 const i18n = require('./i18n');
-//const localization = require("./i18n");
 const localisation = i18n[language];
 
 var wcl = []; // Waiting clients
@@ -39,33 +39,42 @@ function isEqual(name1 = "", name2 = "") {
         return numb;
     }
     else {
-        return 0;
+        return -1;
     }
 }
-function CreateName(nm = "Player") {
-    let namenumber = 2;
+async function CreateName(nm = "Player") {
+    let namenumber = 1;
     let arrhelp = new Set();
     if (USEDB) {
-        const namesarr = DB.Names();
+        const namesarr = await DB.Names();
         namesarr.forEach(name => {
             let eqn = isEqual(nm, name);
-            if (eqn != 0) {
+            if (eqn > 0) {
                 arrhelp.add(eqn);
+            }
+            else if (eqn == 0) {
+                arrhelp.add(1);
             }
         });
     }
     wcl.forEach(cl => {
         let eqn = isEqual(nm, cl.name);
-        if (eqn != 0) {
+        if (eqn > 0) {
             arrhelp.add(eqn);
+        }
+        else if (eqn == 0) {
+            arrhelp.add(1);
         }
     });
     for (let key in rcl) {
         if (rcl[key]) {
             rcl[key].players.forEach(player => {
                 let eqn = isEqual(nm, player.name)
-                if (eqn != 0) {
+                if (eqn > 0) {
                     arrhelp.add(eqn);
+                }
+                else if (eqn == 0) {
+                    arrhelp.add(1);
                 }
             });
         }
@@ -74,8 +83,11 @@ function CreateName(nm = "Player") {
         for (let i = 0; i < game.clients.length; i++) {
             let client = game.clients[i];
             let eqn = isEqual(nm, client.name)
-            if (eqn != 0) {
+            if (eqn > 0) {
                 arrhelp.add(eqn);
+            }
+            else if (eqn == 0) {
+                arrhelp.add(1);
             }
         }
     });
@@ -202,6 +214,7 @@ class Message {
         else if (type == "RemoveAcc") { // For server. Only if player is not ready.
             mess.name = data.name;
             mess.passw = data.passw;
+            mess.data = data.data;
         }
         else if (type == "LoggedIn") { // For player.
             mess.success = data.success;
@@ -308,12 +321,15 @@ function OnConnection(client) {
             name = "Player";
         }
     }
-    name = CreateName(name);
-    let nclient = new Client(ID, client, name, {});
-    wcl.push(nclient);
-    console.log(localisation["player-connect"] + ID + ")");
-    let stms = Message.Create({ 'id': ID, 'name': name }, "NewPlayer");
-    client.send(JSON.stringify(stms));
+    let namee = CreateName(name);
+    namee.then(name => {
+        let nclient = new Client(ID, client, name, {});
+        wcl.push(nclient);
+        console.log(localisation["player-connect"] + ID + ")");
+        let stms = Message.Create({ 'id': ID, 'name': name }, "NewPlayer");
+        client.send(JSON.stringify(stms));
+        client.passwiscorrect = true;
+    });
 }
 
 const wss = new WebSocket.Server({ server });
@@ -351,7 +367,6 @@ wss.on("connection", (client) => {
         if (cmess.type == "Password") {
             if (cmess.passw == passw) {
                 OnConnection(client);
-                client.passwiscorrect = true;
             }
             else {
                 client.close();
@@ -364,20 +379,25 @@ wss.on("connection", (client) => {
                     console.log(localisation["invalid-msg"]);
                     break;
                 case "SetName": // Name changing.
-                    wcl.forEach(cl => {
+                    for (let i = 0, r = false; i < wcl.length && !r; i++) {
+                        let cl = wcl[i];
                         if (cl.socket == client) { // Find sender.
                             if (cl.id != cmess.id) {
                                 client.send(`{"error":4,"type":"error"}`);
-                                console.log(localisation["invalid-id"]);
+                                console.log(localisation["invalid-id"]); r = true;
                                 return;
                             }
                             else {
-                                let newname = CreateName(cmess.name);
-                                let namemess = Message.Create({ id: cmess.id, name: newname }, "Name");
-                                client.send(JSON.stringify(namemess));
+                                let newnamee = CreateName(cmess.name);
+                                newnamee.then(newname => {
+                                    cl.name = newname;
+                                    let namemess = Message.Create({ id: cmess.id, name: newname }, "Name");
+                                    client.send(JSON.stringify(namemess));
+                                });
+                                r = true;
                             }
                         }
-                    });
+                    }
                     break;
                 case "Invite":
                     var ready = false;
@@ -1184,9 +1204,9 @@ wss.on("close", () => {
 });
 
 let timerId;
-if (USEDB) { 
+if (USEDB) {
     timerId = setInterval(() => {
-        DB.Clean (MAXTIME);
+        DB.Clean(MAXTIME);
     }, time);
 }
 

@@ -1,3 +1,4 @@
+require("dotenv").config();
 let storage = {
     Read: async function (name, data) { },
     Write: async function (name, what, data) { },
@@ -77,15 +78,17 @@ switch (process.env.STORAGE) {
                 return (err);
             }
         }
-        storage.Rem = async function (name, data) {
+        storage.Rem = async function (name, passw, data) {
             try {
-                if (data) {
-                    await this.db.hDel(name, data);
+                if (await this.db.hGet(name, "passw") == passw || !await this.db.hGet(name, "passw")) {
+                    if (data) {
+                        await this.db.hDel(name, data);
+                    }
+                    else {
+                        await this.db.hDel(name);
+                    }
+                    return undefined;
                 }
-                else {
-                    await this.db.hDel(name);
-                }
-                return undefined;
             }
             catch (err) {
                 console.log(err);
@@ -122,7 +125,7 @@ switch (process.env.STORAGE) {
                     let pl = this.db.hGetAll(key);
                     if (Number(pl.lastserverlogin) + MAXTIME < Date.now()) {
                         this.Rem(key);
-                        console.log ("Removed " + key + ". Last login: " + pl.lastserverlogin);
+                        console.log("Removed " + key + ". Last login: " + pl.lastserverlogin);
                     }
                 }
             }
@@ -132,7 +135,7 @@ switch (process.env.STORAGE) {
         }
         break;
     case "LEVEL":
-        const {Level} = require("level");
+        const { Level } = require("level");
         stbackend = Level;
         storage.db = new Level('./players-db', { valueEncoding: 'json' });
         storage.Read = async function (name, data) {
@@ -159,12 +162,16 @@ switch (process.env.STORAGE) {
         };
         storage.Reg = async function (name, passw) {
             try {
-                await this.db.get(name);
-                return false
+                let pl = await this.db.get(name);
+                if (pl == undefined) {
+                    await this.db.put(name, { passw: passw, lastserverlogin: Date.now() });
+                    return true;
+                }
+                return false;
             }
             catch (err) {
                 if (err.notFound) {
-                    this.db.put(name, { passw: passw, lastserverlogin: Date.now() });
+                    await this.db.put(name, { passw: passw, lastserverlogin: Date.now() });
                     return true;
                 }
                 else {
@@ -176,9 +183,11 @@ switch (process.env.STORAGE) {
         };
         storage.LogIn = async function (name, passw) {
             try {
-                let pl = this.db.get(name); pl.lastserverlogin = Date.now();
+                let pl = await this.db.get(name); 
+                let a;
+                pl.lastserverlogin = Date.now();
                 if (pl.passw == passw) {
-                    this.db.put(pl);
+                    await this.db.put(name, pl);
                     return true;
                 }
                 else {
@@ -191,17 +200,22 @@ switch (process.env.STORAGE) {
                 return (err);
             }
         }
-        storage.Rem = async function (name, data) {
+        storage.Rem = async function (name, passw, data) {
             try {
-                if (data) {
-                    let pl = this.db.get(name);
-                    delete pl[data];
-                    this.db.put(name, pl);
+                let pl = await this.db.get(name);
+                let a = 0;
+                if (pl) {
+                    if (pl.passw == passw || !pl.passw) {
+                        if (data) {
+                            delete pl[data];
+                            await this.db.put(name, pl);
+                        }
+                        else {
+                            await this.db.del(name);
+                        }
+                    }
+                    return undefined;
                 }
-                else {
-                    await this.db.del(name);
-                }
-                return undefined;
             }
             catch (err) {
                 console.log(err);
@@ -213,6 +227,7 @@ switch (process.env.STORAGE) {
             try {
                 let arrn = [];
                 for await (const [name, data] of this.db.iterator()) {
+                    //console.log (name + " " + data);
                     arrn.push(name);
                 }
                 return arrn;
@@ -229,7 +244,7 @@ switch (process.env.STORAGE) {
                     let pl = data;
                     if (Number(pl.lastserverlogin) + MAXTIME < Date.now()) {
                         this.Rem(name);
-                        console.log ("Removed " + name + ". Last login: " + pl.lastserverlogin);
+                        console.log("Removed " + name + ". Last login: " + pl.lastserverlogin);
                     }
                 }
             }
