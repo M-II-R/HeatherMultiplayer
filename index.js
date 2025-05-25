@@ -35,8 +35,14 @@ const server = express()
     });
 function isEqual(name1 = "", name2 = "") {
     if (name2.startsWith(name1)) {
-        let numb = Number(name2.substring(name1.length));
-        return numb;
+        let number = name2.substring(name1.length);
+        if (!isNaN(number)) {
+            let numb = Number(number);
+            return numb;
+        }
+        else {
+            return -1;
+        }
     }
     else {
         return -1;
