@@ -98,7 +98,15 @@ async function CreateName(nm = "Player") {
         let arr = [...arrhelp];
         arr.sort((a, b) => a - b);
         let r = false;
-        for (let i = 0; i < arr.length && !r; i++) {
+        while (!r) {
+            if (!arrhelp.has(namenumber)) {
+                r = true;
+            }
+            else {
+                namenumber += 1;
+            }
+        }
+        /*for (let i = 0; i < arr.length && !r; i++) {
             let num = arr[i];
             if (namenumber < num) {
                 r = true;
@@ -106,8 +114,13 @@ async function CreateName(nm = "Player") {
             else {
                 namenumber += 1;
             }
+        }*/
+        if (namenumber == 1) {
+            return nm;
         }
-        return nm + String(namenumber);
+        else {
+            return nm + String(namenumber);
+        }
     }
 }
 
@@ -215,6 +228,9 @@ class Message {
             mess.name = data.name;
             mess.passw = data.passw;
             mess.data = data.data;
+        }
+        else if (type == "Removed") {
+            mess.success = data.success;
         }
         else if (type == "LoggedIn") { // For player.
             mess.success = data.success;
