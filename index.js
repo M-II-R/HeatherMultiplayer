@@ -95,8 +95,6 @@ async function CreateName(nm = "Player") {
         return nm;
     }
     else {
-        let arr = [...arrhelp];
-        arr.sort((a, b) => a - b);
         let r = false;
         while (!r) {
             if (!arrhelp.has(namenumber)) {
@@ -106,15 +104,6 @@ async function CreateName(nm = "Player") {
                 namenumber += 1;
             }
         }
-        /*for (let i = 0; i < arr.length && !r; i++) {
-            let num = arr[i];
-            if (namenumber < num) {
-                r = true;
-            }
-            else {
-                namenumber += 1;
-            }
-        }*/
         if (namenumber == 1) {
             return nm;
         }
